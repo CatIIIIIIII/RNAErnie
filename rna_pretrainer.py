@@ -151,6 +151,68 @@ def load_motif(motif_dir, motif_name, tokenizer):
     return res
 
 
+class PretrainingTrainer(Trainer):
+    """paddle trainer for pretraining
+
+    Args:
+        Trainer (paddlenlp.trainer.Trainer): model pretraining trainer
+    """
+
+    def __init__(self, *args, **kwargs):
+        """init trainer
+        """
+        super().__init__(*args, **kwargs)
+
+    def _get_train_sampler(self):
+        """get pretraining sampler
+
+        Returns:
+            BatchSampler (paddle.io.DistributedBatchSampler): pretraining sampler
+        """
+        if not isinstance(self.train_dataset, collections.abc.Sized):
+            return None
+
+        if self.args.world_size <= 1:
+            return paddle.io.BatchSampler(
+                dataset=self.train_dataset,
+                shuffle=False,
+                batch_size=self.args.per_device_train_batch_size,
+                drop_last=self.args.dataloader_drop_last)
+
+        return DistributedBatchSampler(
+            self.train_dataset,
+            batch_size=self.args.per_device_train_batch_size,
+            shuffle=False,
+            num_replicas=self.args.world_size,
+            rank=self.args.process_index,
+            drop_last=self.args.dataloader_drop_last
+        )
+
+
+class CriterionWrapper(paddle.nn.Layer):
+    """wrapper for criterion
+    """
+
+    def __init__(self, criterion):
+        """CriterionWrapper
+        """
+        super(CriterionWrapper, self).__init__()
+        self.criterion = criterion
+
+    def forward(self, output, labels):
+        """forward function
+        Args:
+            output (tuple): prediction_scores, seq_relationship_score
+            labels (tuple): masked_lm_labels, next_sentence_labels
+        Returns:
+            Tensor: final loss.
+        """
+        masked_lm_labels = labels
+        prediction_scores = output
+        loss = self.criterion(prediction_scores, None, masked_lm_labels)
+        return loss
+
+
 class PreTrainingInstance(object):
     """A single training instance.
     """
@@ -588,65 +650,3 @@ def create_masked_lm_predictions_motif(
         masked_lm_labels.append(p.label)
 
     return output_tokens, masked_lm_positions, masked_lm_labels
-
-
-class CriterionWrapper(paddle.nn.Layer):
-    """wrapper for criterion
-    """
-
-    def __init__(self, criterion):
-        """CriterionWrapper
-        """
-        super(CriterionWrapper, self).__init__()
-        self.criterion = criterion
-
-    def forward(self, output, labels):
-        """forward function
-        Args:
-            output (tuple): prediction_scores, seq_relationship_score
-            labels (tuple): masked_lm_labels, next_sentence_labels
-        Returns:
-            Tensor: final loss.
-        """
-        masked_lm_labels = labels
-        prediction_scores = output
-        loss = self.criterion(prediction_scores, None, masked_lm_labels)
-        return loss
-
-
-class PretrainingTrainer(Trainer):
-    """paddle trainer for pretraining
-
-    Args:
-        Trainer (paddlenlp.trainer.Trainer): model pretraining trainer
-    """
-
-    def __init__(self, *args, **kwargs):
-        """init trainer
-        """
-        super().__init__(*args, **kwargs)
-
-    def _get_train_sampler(self):
-        """get pretraining sampler
-
-        Returns:
-            BatchSampler (paddle.io.DistributedBatchSampler): pretraining sampler
-        """
-        if not isinstance(self.train_dataset, collections.abc.Sized):
-            return None
-
-        if self.args.world_size <= 1:
-            return paddle.io.BatchSampler(
-                dataset=self.train_dataset,
-                shuffle=False,
-                batch_size=self.args.per_device_train_batch_size,
-                drop_last=self.args.dataloader_drop_last)
-
-        return DistributedBatchSampler(
-            self.train_dataset,
-            batch_size=self.args.per_device_train_batch_size,
-            shuffle=False,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
-            drop_last=self.args.dataloader_drop_last
-        )

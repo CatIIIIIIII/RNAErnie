@@ -31,7 +31,7 @@ from arg_utils import (
     list2str
 )
 from tokenizer_nuc import NUCTokenizer
-from rna_pretrain import (
+from rna_pretrainer import (
     load_motif,
     PretrainingTrainer,
     CriterionWrapper,
