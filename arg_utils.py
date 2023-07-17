@@ -7,7 +7,6 @@ Date  : 2022/12/7 7:41 PM
 
 import argparse
 import random
-import os.path as osp
 
 import numpy as np
 
@@ -35,7 +34,7 @@ def default_logdir():
     from datetime import datetime
 
     current_time = datetime.now().strftime("%b%d_%H-%M-%S")
-    return osp.join("runs", current_time)
+    return current_time
 
 
 def str2bool(v):

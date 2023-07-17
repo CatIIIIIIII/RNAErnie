@@ -4,22 +4,23 @@ This module implements sequence classification.
 Author: wangning(wangning.roci@gmail.com)
 Date  : 2022/12/7 7:42 PM
 """
-# built-in modules
+
 import math
 import os.path as osp
 import time
+import copy
 from collections import defaultdict
-# third-party modules
+
 from tqdm import tqdm
 import numpy as np
 from Bio import SeqIO
-# paddle modules
+
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
 from paddle.io import Dataset
 from paddlenlp.transformers import ErniePretrainedModel
-# self-defined modules
+
 from dataset_utils import seq2input_ids
 from base_classes import (
     BaseTrainer,
@@ -363,24 +364,32 @@ class SeqClsTrainer(BaseTrainer):
                  args,
                  tokenizer,
                  model,
-                 train_dataset,
+                 indicator=None,
+                 ensemble=None,
+                 train_dataset=None,
                  eval_dataset=None,
                  data_collator=None,
                  loss_fn=None,
                  optimizer=None,
                  compute_metrics=None,
                  visual_writer=None):
-        """
+        """init function
+
         Args:
-            args:
-            model:
-            train_dataset:
-            eval_dataset:
-            data_collator:
-            loss_fn:
-            optimizer:
-            compute_metrics:
-            visual_writer:
+            args: training args
+            tokenizer: convert sequence to ids
+            model: downstream task model
+            pretrained_model: pretrained model
+            indicator: indicator classifier
+            ensemble: ensemble model
+            train_dataset: dataset for training
+            eval_dataset: dataset for evaluation
+            data_collator: data collator
+            loss_fn: loss function
+            optimizer: optimizer for training
+            compute_metrics: metrics function
+            best_metric: best metric to save model
+            visual_writer: visualdl writer
 
         Returns:
             None
@@ -389,6 +398,8 @@ class SeqClsTrainer(BaseTrainer):
             args=args,
             tokenizer=tokenizer,
             model=model,
+            indicator=indicator,
+            ensemble=ensemble,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
@@ -397,6 +408,74 @@ class SeqClsTrainer(BaseTrainer):
             compute_metrics=compute_metrics,
             visual_writer=visual_writer
         )
+
+    def get_input_ids_ind_topk(self, input_ids, seq_lens):
+        """
+        Get top k input ids with indications and return them.
+        Args:
+            input_ids: (B, L) or (B, Ch, L)
+            seq_lens: (B) or (B, Ch)
+
+        Returns:
+            (token ids, probabilities)
+        """
+        input_ids_axes = len(input_ids.shape)
+        if input_ids_axes == 2:
+            Ch = 1
+            (B, max_seq_len) = input_ids.shape
+        # for long sequence classification & three-d closeness
+        else:
+            (B, Ch, max_seq_len) = input_ids.shape
+            input_ids = paddle.reshape(input_ids, shape=(B * Ch, max_seq_len))
+            # (B*Ch)
+            seq_lens = paddle.reshape(seq_lens, shape=(B * Ch, ))
+
+        ind_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.ind_token]
+        sep_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.sep_token]
+
+        is_cross = (seq_lens <= max_seq_len - 2)  # remove [SEP] & [LABEL] token
+        ind_positions = paddle.where(is_cross, x=seq_lens - 1, y=max_seq_len - 3)
+        label_positions = ind_positions + 1
+        sep_positions = ind_positions + 2
+        for b in range(B * Ch):
+            input_ids[b, ind_positions[b]] = ind_id
+            input_ids[b, sep_positions[b]] = sep_id
+
+        masked_positions = copy.deepcopy(label_positions)
+        for i in range(1, B * Ch):
+            masked_positions[i] += i * max_seq_len
+        with paddle.no_grad():
+            ind_logtis = self.indicator(input_ids=input_ids, masked_positions=masked_positions)
+            ind_logits = ind_logtis.detach()  # [B, vocab_size]
+
+        # remove special tokens and bases (A, T, C, G)
+        ind_logits[:, :7] = float('-inf')
+        ind_logits[:, 35:] = float('-inf')
+
+        if input_ids_axes == 3:
+            # for long sequences
+            # (B, Ch, vocab_size)
+            ind_logits = paddle.reshape(ind_logits, shape=(B, Ch, -1))
+            # (B, k)
+            ind_logits = paddle.max(ind_logits, axis=1)
+        ind_probs = F.softmax(ind_logits, axis=-1)
+        # (B, k), (B)
+        topk_probs, topk_ind_ids = paddle.topk(ind_probs, self.args.top_k, axis=-1, largest=True)
+        # (B*Ch, k, max_seq_len)
+        input_ids_inds = paddle.tile(input_ids.unsqueeze(axis=1), repeat_times=(1, self.args.top_k, 1))
+
+        if input_ids_axes == 3:
+            for b in range(B):
+                for c in range(Ch):
+                    input_ids_inds[b * Ch + c, :, label_positions[b * Ch + c]] = paddle.t(topk_ind_ids[b])
+            input_ids_inds = paddle.reshape(input_ids_inds, shape=(B, self.args.top_k, -1, max_seq_len))
+        else:
+            for b in range(B):
+                input_ids_inds[b, :, label_positions[b]] = paddle.t(topk_ind_ids[b])
+        # tested, add it has more accuracy
+        topk_probs = topk_probs / paddle.sum(topk_probs, axis=1, keepdim=True)
+
+        return input_ids_inds, topk_probs, topk_ind_ids
 
     def train(self, epoch):
         """
@@ -408,10 +487,31 @@ class SeqClsTrainer(BaseTrainer):
         with tqdm(total=len(self.train_dataset), disable=self.args.disable_tqdm) as pbar:
             for i, data in enumerate(self.train_dataloader):
                 input_ids = data["input_ids"]
+                seq_lens = data["seq_lens"]
                 labels = data["labels"]
 
-                outputs = self.model(input_ids)
-                loss = self.loss_fn(outputs, labels)
+                if self.args.two_stage:
+                    input_ids_inds, topk_probs, _ = \
+                        self.get_input_ids_ind_topk(input_ids=input_ids, seq_lens=seq_lens)
+
+                    if len(input_ids_inds.shape) == 3:
+                        (B, top_k, max_seq_len) = input_ids_inds.shape
+                        # (B*top_k, max_seq_len)
+                        input_ids_stretch = paddle.reshape(input_ids_inds, shape=(-1, max_seq_len))
+                    else:
+                        (B, top_k, Ch, max_seq_len) = input_ids_inds.shape
+                        # (B*top_k, Ch, max_seq_len)
+                        input_ids_stretch = paddle.reshape(input_ids_inds, shape=(-1, Ch, max_seq_len))
+
+                    logits_stretch = self.model(input_ids_stretch)
+                    # ensemble top k classifier
+                    # (B, top_k, num_classes)
+                    logits_stack = paddle.reshape(logits_stretch, shape=(B, top_k, -1))
+                    logits = self.ensemble(k_logits=logits_stack, topk_probs=topk_probs)
+                else:
+                    logits = self.model(input_ids)
+
+                loss = self.loss_fn(logits, labels)
 
                 self.optimizer.clear_grad()
                 loss.backward()
@@ -427,7 +527,7 @@ class SeqClsTrainer(BaseTrainer):
                     self.visual_writer.update_scalars(tag_value=tag_value, step=self.args.logging_steps)
 
         time_ed = time.time() - time_st
-        print('Train\tLoss: {:.6f}; Time: {:.4f}'.format(loss.item(), time_ed))
+        print('Train\tLoss: {:.6f}; Time: {:.4f}s'.format(loss.item(), time_ed))
 
     def eval(self, epoch):
         """
@@ -440,24 +540,45 @@ class SeqClsTrainer(BaseTrainer):
             outputs_dataset, labels_dataset = [], []
             for i, data in enumerate(self.eval_dataloader):
                 input_ids = data["input_ids"]
+                seq_lens = data["seq_lens"]
                 labels = data["labels"]
 
-                with paddle.no_grad():
-                    outputs = self.model(input_ids)
+                if self.args.two_stage:
+                    input_ids_inds, topk_probs, _ = \
+                        self.get_input_ids_ind_topk(input_ids=input_ids, seq_lens=seq_lens)
 
-                metrics = self.compute_metrics(outputs, labels)
+                    if len(input_ids_inds.shape) == 3:
+                        (B, top_k, max_seq_len) = input_ids_inds.shape
+                        # (B*top_k, max_seq_len)
+                        input_ids_stretch = paddle.reshape(input_ids_inds, shape=(-1, max_seq_len))
+                    else:
+                        (B, top_k, Ch, max_seq_len) = input_ids_inds.shape
+                        # (B*top_k, Ch, max_seq_len)
+                        input_ids_stretch = paddle.reshape(input_ids_inds, shape=(-1, Ch, max_seq_len))
+
+                    with paddle.no_grad():
+                        logits_stretch = self.model(input_ids_stretch)
+                    # ensemble top k classifier
+                    # (B, top_k, num_classes)
+                    logits_stack = paddle.reshape(logits_stretch, shape=(B, top_k, -1))
+                    logits = self.ensemble(k_logits=logits_stack, topk_probs=topk_probs)
+                else:
+                    with paddle.no_grad():
+                        logits = self.model(input_ids)
+
+                metrics = self.compute_metrics(logits, labels)
 
                 pbar.set_postfix(accuracy='{:.4f}'.format(metrics[self.name_pbar]))
-                pbar.update(self.args.logging_steps)
+                pbar.update(self.args.batch_size)
 
-                outputs_dataset.append(outputs)
+                outputs_dataset.append(logits)
                 labels_dataset.append(labels)
 
         # save best model
         outputs_dataset = paddle.concat(outputs_dataset, axis=0)
         labels_dataset = paddle.concat(labels_dataset, axis=0)
         metrics_dataset = self.compute_metrics(outputs_dataset, labels_dataset)
-        if self.args.save_max:
+        if self.args.save_max and self.args.train:
             self.save_model(metrics_dataset, epoch)
 
         # log results to screen/bash
@@ -474,5 +595,4 @@ class SeqClsTrainer(BaseTrainer):
         self.visual_writer.update_scalars(tag_value=tag_value, step=1)
 
         time_ed = time.time() - time_st
-        print('Test\tTime: {:.4f}'.format(time_ed))
-        print(log.format(**results))
+        print(log.format(**results), "; Time: {:.4f}s".format(time_ed))

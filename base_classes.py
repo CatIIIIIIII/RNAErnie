@@ -11,15 +11,69 @@ import numpy as np
 import abc
 import os.path as osp
 
+from sklearn.metrics import f1_score, precision_score, recall_score, matthews_corrcoef, roc_auc_score
+
 import paddle
+import paddle.nn as nn
 import paddle.nn.functional as F
 from paddle.fluid.reader import DataLoader, BatchSampler
 from paddlenlp.data import Stack
-
-from sklearn.metrics import f1_score, precision_score, recall_score, matthews_corrcoef, roc_auc_score
-from modules import IndicatorClassifier
+from paddlenlp.transformers import ErnieForMaskedLM
 
 
+# ===================== Common Modules =====================
+class IndicatorClassifier(nn.Layer):
+    """This class indicate coarse class after token [IND].
+    """
+
+    def __init__(self, model_name_or_path):
+        """
+        Args:
+            model_name_or_path:
+        """
+        super(IndicatorClassifier, self).__init__()
+        self.indicator = ErnieForMaskedLM.from_pretrained(model_name_or_path)
+
+    def forward(self,
+                input_ids,
+                masked_positions):
+        """
+        Args:
+            input_ids:
+            masked_positions:
+        Returns:
+
+        """
+        with paddle.no_grad():
+            outputs = self.indicator(input_ids, masked_positions=masked_positions)
+            return outputs
+
+
+class MajorityVoter(nn.Layer):
+    """Stack top k logits.
+    """
+
+    def __init__(self):
+        """
+        """
+        super(MajorityVoter, self).__init__()
+
+    def forward(self, k_logits, topk_probs):
+        """
+        Forward function.
+
+        Args:
+            k_logits:
+            topk_probs:
+
+        Returns:
+
+        """
+        ensemble_logits = paddle.einsum('ijk,ij->ik', k_logits, topk_probs)
+        return ensemble_logits
+
+
+# ===================== Base Classes =====================
 class BaseTrainer(object):
     """Base trainer
     """
@@ -30,13 +84,13 @@ class BaseTrainer(object):
                  model,
                  pretrained_model=None,
                  indicator=None,
+                 ensemble=None,
                  train_dataset=None,
                  eval_dataset=None,
                  data_collator=None,
                  loss_fn=None,
                  optimizer=None,
                  compute_metrics=None,
-                 best_metric=None,
                  visual_writer=None):
         """init function
 
@@ -46,13 +100,13 @@ class BaseTrainer(object):
             model: downstream task model
             pretrained_model: pretrained model
             indicator: indicator classifier
+            ensemble: ensemble model
             train_dataset: dataset for training
             eval_dataset: dataset for evaluation
             data_collator: data collator
             loss_fn: loss function
             optimizer: optimizer for training
             compute_metrics: metrics function
-            best_metric: best metric to save model
             visual_writer: visualdl writer
 
         Returns:
@@ -63,6 +117,7 @@ class BaseTrainer(object):
         self.model = model
         self.pretrained_model = pretrained_model
         self.indicator = indicator
+        self.ensemble = ensemble
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.data_collator = data_collator
@@ -71,7 +126,6 @@ class BaseTrainer(object):
         self.compute_metrics = compute_metrics
         # default name_pbar is the first metric
         self.name_pbar = self.compute_metrics.metrics[0]
-        self.best_metric = best_metric
         self.visual_writer = visual_writer
         self.max_metric = 0.
         self.max_model_dir = ""
@@ -108,7 +162,7 @@ class BaseTrainer(object):
                             drop_last=self.args.dataloader_drop_last)
 
     def _prepare_dataloaders(self):
-        """
+        """prepare dataloaders, private function
         Returns:
             None
         """
@@ -143,8 +197,8 @@ class BaseTrainer(object):
             print("Model saved at:", save_model_path)
 
     def get_input_ids_ind_topk(self, input_ids, seq_lens, indicator):
-        """
-        Get top k input ids with indications and return them.
+        """Get top k input ids with indications and return them.
+
         Args:
             input_ids: (B, L)
             seq_lens: (B) or (B, Ch)
@@ -206,173 +260,6 @@ class BaseTrainer(object):
         Args:
             epoch: eval epoch
 
-        Returns:
-            None
-        """
-        raise NotImplementedError("Must implement eval method.")
-
-
-class BaseTwostageTrainer(BaseTrainer):
-    """This class builds a basic wrapper from one-stage trainer to two-stage pipline. Reimplement train() and eval().
-    """
-
-    def __init__(self,
-                 args,
-                 tokenizer,
-                 model,
-                 train_dataset,
-                 eval_dataset=None,
-                 data_collator=None,
-                 loss_fn=None,
-                 optimizer=None,
-                 compute_metrics=None,
-                 visual_writer=None):
-        """
-        Args:
-            args: training arguments
-            tokenizer:
-            model: downstream model
-            train_dataset:
-            eval_dataset:
-            data_collator:
-            loss_fn:
-            optimizer:
-            compute_metrics: metrics function
-            visual_writer:
-
-        Returns:
-            None
-        """
-        super(BaseTwostageTrainer, self).__init__(args=args,
-                                                  tokenizer=tokenizer,
-                                                  model=model,
-                                                  train_dataset=train_dataset,
-                                                  eval_dataset=eval_dataset,
-                                                  data_collator=data_collator,
-                                                  loss_fn=loss_fn,
-                                                  optimizer=optimizer,
-                                                  compute_metrics=compute_metrics,
-                                                  visual_writer=visual_writer)
-        self.top_k = args.top_k
-        self.indicator = IndicatorClassifier(args.model_name_or_path)
-
-    def get_input_ids_ind_topk(self, input_ids, seq_lens, indicator):
-        """
-        Get top k input ids with indications and return them.
-        Args:
-            input_ids: (B, L) or (B, Ch, L)
-            seq_lens: (B) or (B, Ch)
-            indicator:
-
-        Returns:
-            (token ids, probabilities)
-        """
-        input_ids_axes = len(input_ids.shape)
-        if input_ids_axes == 2:
-            Ch = 1
-            (B, max_seq_len) = input_ids.shape
-        # for long sequence classification & three-d closeness
-        else:
-            (B, Ch, max_seq_len) = input_ids.shape
-            input_ids = paddle.reshape(input_ids, shape=(B * Ch, max_seq_len))
-            # (B*Ch)
-            seq_lens = paddle.reshape(seq_lens, shape=(B * Ch, ))
-
-        ind_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.ind_token]
-        sep_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.sep_token]
-
-        is_cross = (seq_lens <= max_seq_len - 2)  # remove [SEP] & [LABEL] token
-        ind_positions = paddle.where(is_cross, x=seq_lens - 1, y=max_seq_len - 3)
-        label_positions = ind_positions + 1
-        sep_positions = ind_positions + 2
-        for b in range(B * Ch):
-            input_ids[b, ind_positions[b]] = ind_id
-            input_ids[b, sep_positions[b]] = sep_id
-
-        masked_positions = copy.deepcopy(label_positions)
-        for i in range(1, B * Ch):
-            masked_positions[i] += i * max_seq_len
-        with paddle.no_grad():
-            ind_logtis = indicator(input_ids=input_ids, masked_positions=masked_positions)
-            ind_logits = ind_logtis.detach()  # [B, vocab_size]
-
-        # remove special tokens and bases (A, T, C, G)
-        ind_logits[:, :7] = float('-inf')
-        ind_logits[:, 35:] = float('-inf')
-
-        if input_ids_axes == 3:
-            # for long sequences
-            # (B, Ch, vocab_size)
-            ind_logits = paddle.reshape(ind_logits, shape=(B, Ch, -1))
-            # (B, k)
-            ind_logits = paddle.mean(ind_logits, axis=1)
-        ind_probs = F.softmax(ind_logits, axis=-1)
-        # (B, k), (B)
-        topk_probs, topk_ind_ids = paddle.topk(ind_probs, self.top_k, axis=-1, largest=True)
-        # (B*Ch, k, max_seq_len)
-        input_ids_inds = paddle.tile(input_ids.unsqueeze(axis=1), repeat_times=(1, self.top_k, 1))
-
-        if input_ids_axes == 3:
-            for b in range(B):
-                for c in range(Ch):
-                    input_ids_inds[b * Ch + c, :, label_positions[b * Ch + c]] = paddle.t(topk_ind_ids[b])
-            input_ids_inds = paddle.reshape(input_ids_inds, shape=(B, self.top_k, -1, max_seq_len))
-        else:
-            for b in range(B):
-                input_ids_inds[b, :, label_positions[b]] = paddle.t(topk_ind_ids[b])
-        # tested, add it has more accuracy
-        topk_probs = topk_probs / paddle.sum(topk_probs, axis=1, keepdim=True)
-
-        return input_ids_inds, topk_probs, topk_ind_ids
-
-    def get_input_ids_ind(self, input_ids, seq_lens):
-        """
-        Args:
-            input_ids: (B, L) or (B, Ch, L)
-            seq_lens:
-
-        Returns:
-
-        """
-        if len(input_ids.shape) == 2:
-            Ch = 1
-            (B, max_seq_len) = input_ids.shape
-        elif len(input_ids.shape) == 3:
-            (B, Ch, max_seq_len) = input_ids.shape
-            input_ids = paddle.reshape(input_ids, shape=(B * Ch, max_seq_len))
-        else:
-            B, Ch, max_seq_len = 0, 0, 0
-            NotImplementedError("Check input ids shape.")
-
-        ind_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.ind_token]
-        sep_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.sep_token]
-        mask_id = self.tokenizer.vocab.token_to_idx[self.tokenizer.mask_token]
-
-        is_cross = (seq_lens <= max_seq_len - 2)  # remove [SEP] & [LABEL] token
-        ind_positions = paddle.where(is_cross, x=seq_lens - 1, y=max_seq_len - 3)
-        mask_positions = ind_positions + 1
-        sep_positions = ind_positions + 2
-        for b in range(B * Ch):
-            input_ids[b, ind_positions[b]] = ind_id
-            input_ids[b, mask_positions[b]] = mask_id
-            input_ids[b, sep_positions[b]] = sep_id
-
-        if Ch > 1:
-            input_ids = paddle.reshape(input_ids, shape=(B, Ch, max_seq_len))
-
-        return input_ids
-
-    def train(self, i_epoch):
-        """
-        training epoch id
-        Returns:
-            None
-        """
-        raise NotImplementedError("Must implement train method.")
-
-    def eval(self, i_epoch):
-        """
-        eval epoch id
         Returns:
             None
         """

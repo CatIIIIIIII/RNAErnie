@@ -4,17 +4,17 @@ This module runs sequence classification task.
 Author: wangning(wangning.roci@gmail.com)
 Date  : 2022/12/7 7:41 PM
 """
-# built-in modules
+
 import argparse
 import os.path as osp
 from functools import partial
-# paddle modules
+
 import paddle
 from paddlenlp.datasets import MapDataset
 from paddlenlp.transformers import ErnieForSequenceClassification
 from paddlenlp.utils.log import logger
 from visualizer import Visualizer
-# self-defined modules
+
 from arg_utils import (
     set_seed,
     str2bool,
@@ -23,6 +23,7 @@ from arg_utils import (
     str2list
 )
 from tokenizer_nuc import NUCTokenizer
+from base_classes import IndicatorClassifier, MajorityVoter
 from sequence_classification import (
     SeqClsDataset,
     convert_instance_to_cls,
@@ -80,7 +81,7 @@ parser = argparse.ArgumentParser('Implementation of RNA sequence classification.
 # model args
 parser.add_argument('--model_name_or_path',
                     type=str,
-                    default="./output3/BERT,ERNIE,MOTIF,PROMPT/checkpoint-129000",
+                    default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final",
                     help='The build-in pretrained LM or the path to local model parameters.')
 parser.add_argument('--max_seq_len', type=int, default=0,
                     help='The maximum length for model input, including special tokens.')
@@ -88,6 +89,11 @@ parser.add_argument('--num_classes', type=int, default=0, help='The number of cl
 parser.add_argument('--with_pretrain', type=str2bool, default=True, help='Whether use original channels.')
 parser.add_argument('--hidden_states_size', type=int, default=768, help='The hidden size of model.')
 parser.add_argument('--proj_size', type=int, default=128, help='Project pretrained features to this size.')
+parser.add_argument('--train', type=str2bool, default=True, help='Whether train the model.')
+parser.add_argument('--model_path', type=str, default="./output_ft/seq_cls/nRC/BERT,ERNIE,MOTIF,PROMPT",
+                    help='Pretrained down-stream task model weight.')
+parser.add_argument('--two_stage', type=str2bool, default=False, help='Whether use two-stage pipeline.')
+parser.add_argument('--top_k', type=int, default=3, help='Select top k indications for stage two.')
 
 # data args
 parser.add_argument('--dataset', type=str, default="nRC", choices=DATASETS, help='The dataset name to use.')
@@ -102,8 +108,6 @@ parser.add_argument('--device', type=str, default='gpu', choices=['gpu', 'cpu'],
 parser.add_argument('--seed', type=int, default=0, help='Random seed.')
 parser.add_argument('--fix_pretrain', type=str2bool, default=False, help='Whether fix parameters of pretrained model.')
 parser.add_argument('--disable_tqdm', type=str2bool, default=False, help='Disable tqdm display if true.')
-parser.add_argument('--two_stage', type=str2bool, default=False, help='Whether use two-stage pipeline.')
-parser.add_argument('--top_k', type=int, default=3, help='Select top k indications for stage two.')
 parser.add_argument('--max_chunk_number', type=int, default=MAX_CHUNK_NUMBER,
                     help='Maximum chunk number for long sequences.')
 parser.add_argument('--use_chunk', type=str2bool, default=True,
@@ -128,6 +132,7 @@ parser.add_argument('--metrics',
                     default="Accuracy,Precision,Recall,F1s",
                     help='Use which metrics to evaluate model, could be concatenate by ",".')
 
+# logging args
 parser.add_argument('--logging_steps', type=int, default=100, help='Update visualdl logs every logging_steps.')
 parser.add_argument('--output', type=str, default="./output_ft/seq_cls", help='Output directory.')
 parser.add_argument('--visualdl_dir', type=str, default="visualdl", help='Visualdl logging directory.')
@@ -174,15 +179,25 @@ tokenizer = NUCTokenizer(
     k_mer=args.k_mer,
     vocab_file=args.vocab_path,
 )
-
 # load pretrained model
 logger.info("Loading pretrained model.")
-if args.dataset != "nRC" and args.use_chunk:
-    model = ErnieForLongSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
+if args.train:
+    # train from scratch
+    if args.dataset != "nRC" and args.use_chunk:
+        model = ErnieForLongSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
+    else:
+        model = ErnieForSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
 else:
-    model = ErnieForSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
+    if args.dataset != "nRC" and args.use_chunk:
+        model = ErnieForLongSequenceClassification.from_pretrained(args.model_path, num_classes=args.num_classes)
+    else:
+        model = ErnieForSequenceClassification.from_pretrained(args.model_path, num_classes=args.num_classes)
+indicator = IndicatorClassifier(model_name_or_path=args.model_name_or_path) if args.two_stage else None
+ensemble = MajorityVoter() if args.two_stage else None
 # load loss function
 _loss_fn = SeqClsLoss()
+# load model
+logger.info("Loading model.")
 
 # ========== Prepare data
 logger.debug("Preparing data.")
@@ -203,19 +218,22 @@ logger.info("Creating learning rate scheduler and optimizer.")
 optimizer = paddle.optimizer.AdamW(parameters=model.parameters(), learning_rate=args.learning_rate)
 
 # ========== Create visualizer
-_visualizer = Visualizer(log_dir=args.visualdl_dir, name="Sequence classification, " + args.dataset + ", " + ct)
+if args.train:
+    _visualizer = Visualizer(log_dir=args.visualdl_dir, name="Sequence classification, " + args.dataset + ", " + ct)
+
 # ========== Training
 logger.debug("Start training.")
 if args.dataset != "nRC" and args.use_chunk:
     _collate_fn = LongSeqClsCollator(max_seq_len=args.max_seq_len, tokenizer=tokenizer)
 else:
     _collate_fn = SeqClsCollator(max_seq_len=args.max_seq_len, tokenizer=tokenizer)
-
 _metric = SeqClsMetrics(metrics=args.metrics)
 # train model
 seq_cls_trainer = SeqClsTrainer(args=args,
                                 tokenizer=tokenizer,
                                 model=model,
+                                indicator=indicator,
+                                ensemble=ensemble,
                                 train_dataset=m_dataset_train,
                                 eval_dataset=m_dataset_test,
                                 data_collator=_collate_fn,
@@ -223,8 +241,11 @@ seq_cls_trainer = SeqClsTrainer(args=args,
                                 optimizer=optimizer,
                                 compute_metrics=_metric,
                                 visual_writer=_visualizer)
-
-for i_epoch in range(args.num_train_epochs):
-    print("Epoch: {}".format(i_epoch))
-    seq_cls_trainer.train(i_epoch)
-    seq_cls_trainer.eval(i_epoch)
+if args.train:
+    for i_epoch in range(args.num_train_epochs):
+        print("Epoch: {}".format(i_epoch))
+        seq_cls_trainer.train(i_epoch)
+        seq_cls_trainer.eval(i_epoch)
+else:
+    # evaluate dataset only
+    seq_cls_trainer.eval(0)

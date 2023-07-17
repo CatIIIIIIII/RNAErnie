@@ -4,14 +4,14 @@ This module runs RNAErnie pretrain.
 Author: wangning(wangning.roci@gmail.com)
 Date  : 2022/9/8 1:21 PM
 """
-# built-in modules
+
 import argparse
 import os
 import os.path as osp
 from functools import partial
-# 3rd-party modules
+
 from ahocorapy.keywordtree import KeywordTree
-# paddle modules
+
 import paddle
 from paddlenlp.transformers import (
     ErnieModel,
@@ -22,7 +22,7 @@ from paddlenlp.transformers import (
 from paddlenlp.trainer import PdArgumentParser, get_last_checkpoint
 from paddlenlp.datasets import MapDataset
 from paddlenlp.utils.log import logger
-# self-defined modules
+
 from arg_utils import (
     str2bool,
     str2list,
@@ -73,7 +73,7 @@ RNA_LABELS = ['RNase_MRP_RNA',
               'vault_RNA']
 
 # ========== Configuration
-parser = argparse.ArgumentParser('Implementation of RNA pretrain.')
+parser = argparse.ArgumentParser('Implementation of RNAErnie pretrain.')
 # model args
 parser.add_argument('--model_name_or_path', type=str, default="ernie-1.0",
                     help='The build-in pretrained LM or the path to local model parameters.')
