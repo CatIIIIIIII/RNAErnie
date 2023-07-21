@@ -199,7 +199,6 @@ logger.debug("Building tokenizer, model, criterion.")
 logger.debug("Loading tokenization.")
 tokenizer = NUCTokenizer(args.k_mer, args.vocab_path)
 assert tokenizer.vocab_size == args.vocab_size, "Vocab size of tokenizer must be equal to args.vocab_size."
-
 # load base model, pretrain model
 base_class, model_class, criterion_class = ErnieModel, ErnieForMaskedLM, ErniePretrainingCriterion
 pretrained_models_list = list(model_class.pretrained_init_configuration.keys())
