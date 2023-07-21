@@ -22,6 +22,37 @@ from paddlenlp.transformers import ErnieForMaskedLM
 
 
 # ===================== Common Modules =====================
+class MlpProjector(nn.Layer):
+    """MLP projection head.
+    """
+
+    def __init__(self, n_in, output_size=128):
+        """
+        Args:
+            n_in:
+            output_size:
+        """
+        super(MlpProjector, self).__init__()
+        self.dense = nn.Linear(n_in, output_size)
+        self.activation = nn.ReLU()
+        self.projection = nn.Linear(output_size, output_size)
+        self.n_out = output_size
+
+    def forward(self, embeddings):
+        """
+        Args:
+            embeddings:
+
+        Returns:
+
+        """
+        x = self.dense(embeddings)
+        x = self.activation(x)
+        x = self.projection(x)
+
+        return x
+
+
 class IndicatorClassifier(nn.Layer):
     """This class indicate coarse class after token [IND].
     """
@@ -234,9 +265,9 @@ class BaseTrainer(object):
         ind_logits[:, 35:] = float('-inf')
         ind_probs = F.softmax(ind_logits, axis=-1)
         # (B, k), (B)
-        topk_probs, topk_ind_ids = paddle.topk(ind_probs, self.top_k, axis=-1, largest=True)
+        topk_probs, topk_ind_ids = paddle.topk(ind_probs, self.args.top_k, axis=-1, largest=True)
         # (B*Ch, k, max_seq_len)
-        input_ids_inds = paddle.tile(input_ids.unsqueeze(axis=1), repeat_times=(1, self.top_k, 1))
+        input_ids_inds = paddle.tile(input_ids.unsqueeze(axis=1), repeat_times=(1, self.args.top_k, 1))
 
         for b in range(B):
             input_ids_inds[b, :, label_positions[b]] = paddle.t(topk_ind_ids[b])

@@ -390,9 +390,6 @@ class SeqClsTrainer(BaseTrainer):
             compute_metrics: metrics function
             best_metric: best metric to save model
             visual_writer: visualdl writer
-
-        Returns:
-            None
         """
         super(SeqClsTrainer, self).__init__(
             args=args,
@@ -478,12 +475,15 @@ class SeqClsTrainer(BaseTrainer):
         return input_ids_inds, topk_probs, topk_ind_ids
 
     def train(self, epoch):
-        """
+        """train function
+
         Returns:
             None
         """
         self.model.train()
         time_st = time.time()
+        num_total, loss_total = 0, 0
+
         with tqdm(total=len(self.train_dataset), disable=self.args.disable_tqdm) as pbar:
             for i, data in enumerate(self.train_dataloader):
                 input_ids = data["input_ids"]
@@ -518,8 +518,13 @@ class SeqClsTrainer(BaseTrainer):
                 self.optimizer.step()
 
                 # log to pbar
-                pbar.set_postfix(train_loss='{:.4f}'.format(loss.item()))
+                num_total += self.args.batch_size
+                loss_total += loss.item()
+                pbar.set_postfix(train_loss='{:.4f}'.format(loss_total / num_total))
                 pbar.update(self.args.batch_size)
+                # reset loss if too many steps
+                if num_total >= self.args.logging_steps:
+                    num_total, loss_total = 0, 0
                 # log to visualdl
                 if (i + 1) % self.args.logging_steps == 0:
                     # log to directory
@@ -530,7 +535,8 @@ class SeqClsTrainer(BaseTrainer):
         print('Train\tLoss: {:.6f}; Time: {:.4f}s'.format(loss.item(), time_ed))
 
     def eval(self, epoch):
-        """
+        """eval function
+
         Returns:
             None
         """
