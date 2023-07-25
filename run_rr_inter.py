@@ -50,7 +50,7 @@ parser.add_argument('--with_pretrain', type=str2bool, default=True, help='Whethe
 parser.add_argument('--proj_size', type=int, default=64, help='Project pretrained features to this size.')
 parser.add_argument('--model_path',
                     type=str,
-                    default="./output_ft/rr_inter/MirTarRAW/BERT,ERNIE,MOTIF,PROMPT/epoch_49/model_state.pdparams",
+                    default="./output_ft/rr_inter/MirTarRAW/BERT,ERNIE,MOTIF,PROMPT/model_state.pdparams",
                     help='The build-in pretrained LM or the path to local model parameters.')
 
 # data args
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     if ".txt" not in args.vocab_path:
         # expected: "./data/vocab/vocab_1MER.txt"
         args.vocab_path = osp.join(args.vocab_path, "vocab_" + str(args.k_mer) + "MER.txt")
-    if args.model_path.split(".") != "pdparams":
+    if args.model_path.split(".")[-1] != "pdparams":
         args.model_path = osp.join(args.model_path, "model_state.pdparams")
     ct = default_logdir()
     args.output = osp.join(osp.join(args.output, args.dataset), ct)

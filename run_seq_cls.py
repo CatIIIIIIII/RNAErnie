@@ -136,7 +136,7 @@ if __name__ == "__main__":
     if ".txt" not in args.vocab_path:
         args.vocab_path = osp.join(args.vocab_path,
                                    "vocab_" + str(args.k_mer) + "MER.txt")  # expected: "./data/vocab/vocab_6MER.txt"
-    if args.model_path.split(".") != "pdparams":
+    if args.model_path.split(".")[-1] != "pdparams":
         args.model_path = osp.join(args.model_path, "model_state.pdparams")
     ct = default_logdir()
     args.output = osp.join(osp.join(args.output, args.dataset), ct)

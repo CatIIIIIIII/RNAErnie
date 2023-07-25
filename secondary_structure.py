@@ -1214,7 +1214,7 @@ class SspTrainer(BaseTrainer):
                         break
                 else:
                     print(headers)
-
+                break
                 # log to pbar
                 num_total += self.args.batch_size
                 loss_total += loss.item()
