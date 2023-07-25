@@ -23,7 +23,7 @@ from paddle.io import Dataset
 from dataset_utils import seq2input_ids
 from base_classes import (
     BaseInstance,
-    BaseFuncMetrics,
+    BaseMetrics,
     BaseCollator,
     MlpProjector,
     BaseTrainer
@@ -1080,7 +1080,7 @@ def compare_bpseq(ref, pred):
     return tp, tn, fp, fn
 
 
-class SspMetric(BaseFuncMetrics):
+class SspMetric(BaseMetrics):
     """Secondary structure prediction metric.
     """
 

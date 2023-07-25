@@ -11,7 +11,14 @@ import numpy as np
 import abc
 import os.path as osp
 
-from sklearn.metrics import f1_score, precision_score, recall_score, matthews_corrcoef, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    matthews_corrcoef,
+    roc_auc_score
+)
 
 import paddle
 import paddle.nn as nn
@@ -334,7 +341,7 @@ class BaseInstance(object):
         return vars(self).items()
 
 
-class BaseFuncMetrics(abc.ABC):
+class BaseMetrics(abc.ABC):
     """Base class for functional tasks metrics
     """
 
@@ -346,7 +353,7 @@ class BaseFuncMetrics(abc.ABC):
         self.metrics = [x.lower() for x in metrics]
 
     @abc.abstractmethod
-    def __call__(self, **kwargs):
+    def __call__(self, outputs, labels):
         """
         Args:
             kwargs: required args of model (dict)
@@ -354,7 +361,22 @@ class BaseFuncMetrics(abc.ABC):
         Returns:
             metrics in dict
         """
-        raise NotImplementedError("Must implement __call__ method.")
+        preds = paddle.argmax(outputs, axis=-1)
+        preds = paddle.cast(preds, 'int32')
+        preds = preds.numpy()
+
+        labels = paddle.cast(labels, 'int32')
+        labels = labels.numpy()
+
+        res = {}
+        for name in self.metrics:
+            func = getattr(self, name)
+            if func:
+                m = func(preds, labels)
+                res[name] = m
+            else:
+                raise NotImplementedError
+        return res
 
     @staticmethod
     def accuracy(preds, labels):
@@ -367,10 +389,7 @@ class BaseFuncMetrics(abc.ABC):
         Returns:
             accuracy
         """
-        N = preds.shape[0]
-        acc = np.sum(np.equal(preds, labels)) / N
-
-        return acc
+        return accuracy_score(labels, preds)
 
     @staticmethod
     def precision(preds, labels):

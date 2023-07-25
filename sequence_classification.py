@@ -26,7 +26,7 @@ from base_classes import (
     BaseTrainer,
     BaseCollator,
     BaseInstance,
-    BaseFuncMetrics,
+    BaseMetrics,
 )
 
 
@@ -75,6 +75,7 @@ class SeqClsDataset(Dataset):
 
     def __len__(self):
         """get length of dataset
+
         Returns:
             int: length of dataset
         """
@@ -86,7 +87,8 @@ class ClsInstance(BaseInstance):
     """
 
     def __init__(self, input_ids, label):
-        """
+        """init function
+
         Args:
             input_ids: for ernie model (either from pretrained or scratch)
             label:
@@ -105,7 +107,8 @@ class SeqClsCollator(BaseCollator):
     """
 
     def __init__(self, max_seq_len, tokenizer):
-        """
+        """init function
+
         Args:
             max_seq_len: max sequence length for input
             tokenizer:
@@ -118,7 +121,8 @@ class SeqClsCollator(BaseCollator):
         self.tokenizer = tokenizer
 
     def __call__(self, data):
-        """
+        """call function
+
         Args:
             data: instance for stack
 
@@ -160,7 +164,8 @@ class LongSeqClsCollator(BaseCollator):
     """
 
     def __init__(self, max_seq_len, tokenizer):
-        """
+        """init function
+
         Args:
             max_seq_len: max sequence length for input
             tokenizer:
@@ -174,7 +179,8 @@ class LongSeqClsCollator(BaseCollator):
         self.chunk_size = 512
 
     def __call__(self, data):
-        """
+        """call function
+
         Args:
             data: instance for stack
 
@@ -223,10 +229,11 @@ class LongSeqClsCollator(BaseCollator):
 
 
 def convert_instance_to_cls(raw_data, tokenizer, label2id):
-    """
+    """convert raw data to instance for sequence classification
+
     Args:
-        raw_data:
-        tokenizer:
+        raw_data: raw RNA sequence
+        tokenizer: nucleotide tokenizer
         label2id: map str label to int
 
     Returns:
@@ -256,6 +263,7 @@ class SeqClsLoss(nn.Layer):
 
     def forward(self, outputs, labels, topk_probs=None):
         """forward function
+
         Args:
             outputs: [B, C] logit scores
             labels: [N] labels
@@ -283,40 +291,18 @@ class SeqClsLoss(nn.Layer):
         return loss
 
 
-class SeqClsMetrics(BaseFuncMetrics):
+class SeqClsMetrics(BaseMetrics):
     """Metrics for classification
     """
 
     def __call__(self, outputs, labels):
+        """call function
         """
-        Args:
-            outputs: output of model, (batch_size, )
-            labels: ground truth of data, (batch_size, )
-
-        Returns:
-            metrics in dict
-        """
-        preds = paddle.argmax(outputs, axis=-1)
-        preds = paddle.cast(preds, 'int32')
-        preds = preds.numpy()
-
-        labels = paddle.cast(labels, 'int32')
-        labels = labels.numpy()
-
-        res = {}
-        for name in self.metrics:
-            func = getattr(self, name)
-            if func:
-                m = func(preds, labels)
-                res[name] = m
-            else:
-                raise NotImplementedError
-        return res
+        return super().__call__(outputs, labels)
 
 
 class ErnieForLongSequenceClassification(ErniePretrainedModel):
-    """
-    Ernie Model with a linear layer on top of the output layer,
+    """Ernie Model with a linear layer on top of the output layer,
     designed for sequence classification/regression tasks like GLUE tasks.
 
     Args:
@@ -359,52 +345,6 @@ class ErnieForLongSequenceClassification(ErniePretrainedModel):
 class SeqClsTrainer(BaseTrainer):
     """Trainer for sequence classification.
     """
-
-    def __init__(self,
-                 args,
-                 tokenizer,
-                 model,
-                 indicator=None,
-                 ensemble=None,
-                 train_dataset=None,
-                 eval_dataset=None,
-                 data_collator=None,
-                 loss_fn=None,
-                 optimizer=None,
-                 compute_metrics=None,
-                 visual_writer=None):
-        """init function
-
-        Args:
-            args: training args
-            tokenizer: convert sequence to ids
-            model: downstream task model
-            pretrained_model: pretrained model
-            indicator: indicator classifier
-            ensemble: ensemble model
-            train_dataset: dataset for training
-            eval_dataset: dataset for evaluation
-            data_collator: data collator
-            loss_fn: loss function
-            optimizer: optimizer for training
-            compute_metrics: metrics function
-            best_metric: best metric to save model
-            visual_writer: visualdl writer
-        """
-        super(SeqClsTrainer, self).__init__(
-            args=args,
-            tokenizer=tokenizer,
-            model=model,
-            indicator=indicator,
-            ensemble=ensemble,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            data_collator=data_collator,
-            loss_fn=loss_fn,
-            optimizer=optimizer,
-            compute_metrics=compute_metrics,
-            visual_writer=visual_writer
-        )
 
     def get_input_ids_ind_topk(self, input_ids, seq_lens):
         """
@@ -580,9 +520,9 @@ class SeqClsTrainer(BaseTrainer):
                 outputs_dataset.append(logits)
                 labels_dataset.append(labels)
 
-        # save best model
         outputs_dataset = paddle.concat(outputs_dataset, axis=0)
         labels_dataset = paddle.concat(labels_dataset, axis=0)
+        # save best model
         metrics_dataset = self.compute_metrics(outputs_dataset, labels_dataset)
         if self.args.save_max and self.args.train:
             self.save_model(metrics_dataset, epoch)
@@ -598,7 +538,8 @@ class SeqClsTrainer(BaseTrainer):
             results[k] = v
             tag = "eval/" + k
             tag_value[tag] = v
-        self.visual_writer.update_scalars(tag_value=tag_value, step=1)
+        if self.args.train:
+            self.visual_writer.update_scalars(tag_value=tag_value, step=1)
 
         time_ed = time.time() - time_st
         print(log.format(**results), "; Time: {:.4f}s".format(time_ed))

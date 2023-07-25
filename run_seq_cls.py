@@ -115,17 +115,8 @@ parser.add_argument('--max_chunk_number', type=int, default=MAX_CHUNK_NUMBER,
 parser.add_argument('--use_chunk', type=str2bool, default=True,
                     help='Whether use chunk strategy when classify long sequences.')
 
-parser.add_argument('--batch_size', type=int, default=50, help='The number of samples used per step & per device.')
-parser.add_argument('--per_device_train_batch_size',
-                    type=int,
-                    default=0,
-                    help='The number of samples used for train, default same to batch_size.')
-parser.add_argument('--per_device_eval_batch_size',
-                    type=int,
-                    default=0,
-                    help='The number of samples used for eval, default same to batch_size.')
-
 parser.add_argument('--train', type=str2bool, default=True, help='Whether train the model.')
+parser.add_argument('--batch_size', type=int, default=50, help='The number of samples used per step & per device.')
 parser.add_argument('--num_train_epochs', type=int, default=50, help='The number of epoch for training.')
 parser.add_argument('--learning_rate', type=float, default=1e-4, help='The learning rate of optimizer.')
 parser.add_argument('--metrics',
@@ -137,10 +128,6 @@ parser.add_argument('--metrics',
 parser.add_argument('--logging_steps', type=int, default=100, help='Update visualdl logs every logging_steps.')
 parser.add_argument('--output', type=str, default="./output_ft/seq_cls", help='Output directory.')
 parser.add_argument('--visualdl_dir', type=str, default="visualdl", help='Visualdl logging directory.')
-parser.add_argument('--model_dir',
-                    type=str,
-                    default="model",
-                    help='The output directory where the model predictions and checkpoints will be written. ')
 parser.add_argument('--save_max', type=str2bool, default=True, help='Save model with max metric.')
 args = parser.parse_args()
 
@@ -149,15 +136,14 @@ if __name__ == "__main__":
     if ".txt" not in args.vocab_path:
         args.vocab_path = osp.join(args.vocab_path,
                                    "vocab_" + str(args.k_mer) + "MER.txt")  # expected: "./data/vocab/vocab_6MER.txt"
+    if args.model_path.split(".") != "pdparams":
+        args.model_path = osp.join(args.model_path, "model_state.pdparams")
     ct = default_logdir()
     args.output = osp.join(osp.join(args.output, args.dataset), ct)
-    args.per_device_train_batch_size = args.batch_size
-    args.per_device_eval_batch_size = args.batch_size
     args.num_classes = NUM_CLASSES[args.dataset]
     if args.max_seq_len == 0:
         args.max_seq_len = MAX_SEQ_LEN[args.dataset]
     args.visualdl_dir = osp.join(args.output, args.visualdl_dir)
-    args.model_dir = osp.join(args.output, args.model_dir)
     print_config(args, "RNA Sequence Classification")
 
     # ========== Set random seeds
@@ -167,11 +153,6 @@ if __name__ == "__main__":
     # ========== Set device
     logger.debug("Set device.")
     paddle.set_device(args.device)
-
-    # ========== Set multi-gpus environment
-    logger.debug("Set multi-gpus environment.")
-    if paddle.distributed.get_world_size() > 1:
-        paddle.distributed.init_parallel_env()
 
     # ========== Build tokenizer, model, criterion
     logger.debug("Build tokenizer, model, criterion.")
