@@ -81,7 +81,7 @@ parser.add_argument('--device',
 
 parser.add_argument('--num_train_epochs', type=int, default=50, help='The number of epoch for training.')
 parser.add_argument('--batch_size', type=int, default=1, help='The number of samples used per step, must be 1.')
-parser.add_argument('--lr', type=float, default=0.001, help='the learning rate for optimizer (default: 0.001)')
+parser.add_argument('--learning_rate', type=float, default=0.001, help='the learning rate for optimizer (default: 0.001)')
 parser.add_argument('--l1-weight', type=float, default=0., help='the weight for L1 regularization (default: 0)')
 parser.add_argument('--l2-weight', type=float, default=0., help='the weight for L2 regularization (default: 0)')
 parser.add_argument('--loss_pos_paired',
