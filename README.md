@@ -215,7 +215,7 @@ python run_ssp.py \
     --output=./output_ft/ssp
 ```
 
-Note that we use `interface.*.so` compiled from [mxfold2](https://github.com/mxfold/mxfold2). If you system could not run the `interface.*.so` file, you could download the source code from [here]() and compile it by yourself. Then copy the generated `interface.*.so` file to `./` path.
+**Note**: we use `interface.*.so` compiled from [mxfold2](https://github.com/mxfold/mxfold2). If you system could not run the `interface.*.so` file, you could download the source code from [here](https://github.com/mxfold/mxfold2/releases/download/v0.1.2/mxfold2-0.1.2.tar.gz) and compile it by yourself. Then copy the generated `interface.*.so` file to `./` path.
 
 #### 3. Evaluation
 
