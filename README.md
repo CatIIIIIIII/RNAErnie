@@ -5,7 +5,6 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ![Overview](./images/overview.png)
 
-
 ## Installation <a name="Installation"></a>
 ### Use Docker Image (Strongly Recommended) <a name="Use_docker_image"></a>
 
@@ -24,7 +23,7 @@ conda activate RNA-FM
 
 ## Pre-training <a name="Pre-training"></a>
 ### 1. Data Preparation <a name="Data_Preparation"></a>
-You can download my pretraining dataset from [Google Drive](https://drive.google.com/file/d/17nGJz0NW-Kd_Z3wAFhzeW5AUNAka6Yed/view?usp=sharing) and place the `.fasta` files in the `./data/pre_random` folder.
+You can download my selected (nts<512) pretraining dataset from [Google Drive](https://drive.google.com/file/d/17nGJz0NW-Kd_Z3wAFhzeW5AUNAka6Yed/view?usp=sharing) or from [RNAcentral](https://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/sequences/rnacentral_active.fasta.gz) and place the `.fasta` files in the `./data/pre_random` folder.
 
 ### 2. Pre-training <a name="Pre-training"></a>
 Pretrain RNAErnie on selected RNAcentral datasets (nts<=512) with the following command:
@@ -54,6 +53,7 @@ Our pre-trained model with BERT, ERNIE and MOTIF masking strategies could be dow
 ### 4. Extract RNA Sequence Embeddings <a name="RNA_sequence_embedding"></a>
 
 Then you could extract embeddings of given RNA sequences or from `.fasta` file with the following codes:
+
 ```python
 from rna_ernie import BatchConverter
 from paddlenlp.transformers import ErnieModel
@@ -86,4 +86,9 @@ for names, _, inputs_ids in batch_converter(data):
         embeddings_cls = embeddings[:, 0, :]
 ```
 
+## Downstream Tasks <a name="Downstream_Tasks"></a>
+### Fine-tuning on RNA sequence classification <a name="Fine-tuning_on_RNA_sequence_classification"></a>
 
+### Fine-tuning on RNA-RNA interaction prediction <a name="Fine-tuning_on_RNA-RNA_interaction_prediction"></a>
+
+### Adaptation on RNA secondary structure prediction <a name="Adaptation_on_RNA_secondary_structure_prediction"></a>
