@@ -34,8 +34,6 @@ You can download my selected (nts<512) pretraining dataset from [Google Drive](h
 
 Then, you can use the following command to generate the pre-training data:
 
-```bash
-
 ### 2. Pre-training
 
 Pretrain RNAErnie on selected RNAcentral datasets (nts<=512) with the following command:
@@ -217,7 +215,7 @@ python run_ssp.py \
 
 #### 3. Evaluation
 
-Or you could download our weights of RNAErnie on RNA secondary structure prediction tasks from [Google Drive](https://drive.google.com/drive/folders/1rHkZPWd_TjQvMQII89kBeWe7ufBKld-I?usp=sharing) and place them in the `./output_ft/ssp` folder.
+Or you could download our weights of RNAErnie on RNA secondary structure prediction tasks from [Google Drive](https://drive.google.com/drive/folders/1UljS7YvDdYvWgmR7R5EdBG0OPPbkKoaB?usp=sharing) and place them in the `./output_ft/ssp` folder.
 
 Then you could evaluate the performance with the following codes:  
 
@@ -225,6 +223,6 @@ Then you could evaluate the performance with the following codes:
 python run_ssp.py \
     --task_name=RNAStrAlign \
     --dataset_dir=./data/ft/ssp \
-    --model_name=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
+    --model_name=./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
     --train=False \
 ```
