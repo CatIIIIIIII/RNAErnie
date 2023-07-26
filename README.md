@@ -79,8 +79,10 @@ visualdl --logdir ./output/BERT,ERNIE,MOTIF,PROMPT/runs/you_date/
 Then you could extract embeddings of given RNA sequences or from `.fasta` file with the following codes:
 
 ```python
+import paddle
 from rna_ernie import BatchConverter
 from paddlenlp.transformers import ErnieModel
+
 # ========== Set device
 paddle.set_device("gpu")
 
@@ -131,7 +133,7 @@ python run_seq_cls.py \
     --batch_size=50 \
     --num_train_epochs=100 \
     --learning_rate=0.0001 \
-    --output=./output_ft/seq_cls \
+    --output=./output_ft/seq_cls
 ```
 
 Moreover, to train on long ncRNA classification tasks, change augument `--dataset` to `lncRNA_M` or `lncRNA_H`, and you can add the `--use_chunk=True` argument to chunk and ensemble the whole sequence.
@@ -150,7 +152,7 @@ python run_seq_cls.py \
     --dataset_dir=./data/ft/seq_cls \
     --model_path=./output_ft/seq_cls/nRC/BERT,ERNIE,MOTIF,PROMPT \
     --train=False \
-    --batch_size=50 \
+    --batch_size=50
 ```
 
 To evaluate two-stage procedure, you can add the `--two_stage=True` argument and change the `--model_path` to `./output_ft/seq_cls/nRC/BERT,ERNIE,MOTIF,PROMPT,2`.
@@ -174,7 +176,7 @@ python run_rr_inter.py \
     --batch_size=256 \
     --num_train_epochs=100 \
     --learning_rate=0.001 \
-    --output=./output_ft/rr_inter \
+    --output=./output_ft/rr_inter
 ```
 
 #### 3. Evaluation
@@ -189,7 +191,7 @@ python run_rr_inter.py \
     --dataset_dir=./data/ft/rr_inter \
     --model_path=./output_ft/rr_inter/MirTarRAW/BERT,ERNIE,MOTIF,PROMPT \
     --train=False \
-    --batch_size=256 \
+    --batch_size=256
 ```
 
 ### RNA secondary structure prediction
@@ -210,7 +212,7 @@ python run_ssp.py \
     --train=True \
     --num_train_epochs=50 \
     --learning_rate=0.001 \
-    --output=./output_ft/ssp \
+    --output=./output_ft/ssp
 ```
 
 #### 3. Evaluation
@@ -224,5 +226,5 @@ python run_ssp.py \
     --task_name=RNAStrAlign \
     --dataset_dir=./data/ft/ssp \
     --model_name=./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
-    --train=False \
+    --train=False
 ```
