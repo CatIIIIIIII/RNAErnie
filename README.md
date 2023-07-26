@@ -1,137 +1,89 @@
 # RNAErnie
-Official implement of paper "Multi-purpose RNA Language Modeling with Motif-aware Pre-training and Type-guided Fine-tuning"
+Official implement of paper "Multi-purpose RNA Language Modeling with Motif-aware Pre-training and Type-guided Fine-tuning" with [paddlepaddle](https://github.com/PaddlePaddle/Paddle/tree/develop).
+
+This repository contains codes and pre-trained models for RNAErnie, which leverages RNA motifs as **biological priors** and proposes a **motif-level random masking** strategy to enhance pre-training tasks. Furthermore, RNAErnie improves sequence classfication, RNA-RNA interaction prediction, and RNA secondary structure prediction by fine-tuning or adapating on downstream tasks with two-stage **type-guided** learning. Our paper will be published soon.
+
+![Overview](./images/overview.png)
 
 
-# RNA-FM
-This repository contains codes and pre-trained models for **RNA foundation model (RNA-FM)**.
-**RNA-FM outperforms all tested single-sequence RNA language models across a variety of structure prediction tasks as well as several function-related tasks.**
-You can find more details about **RNA-FM** in our paper, ["Interpretable RNA Foundation Model from Unannotated Data for Highly Accurate RNA Structure and Function Predictions" (Chen et al., 2022).](https://arxiv.org/abs/2204.00300)
+## Installation <a name="Installation"></a>
+### Use Docker Image (Strongly Recommended) <a name="Use_docker_image"></a>
 
-![Overview](./docs/pics/overview.png)
+### Create Environment with Conda <a name="Setup_Environment"></a>
 
-
-<details><summary>Citation</summary>
-
-```bibtex
-@article{chen2022interpretable,
-  title={Interpretable rna foundation model from unannotated data for highly accurate rna structure and function predictions},
-  author={Chen, Jiayang and Hu, Zhihang and Sun, Siqi and Tan, Qingxiong and Wang, Yixuan and Yu, Qinze and Zong, Licheng and Hong, Liang and Xiao, Jin and King, Irwin and others},
-  journal={arXiv preprint arXiv:2204.00300},
-  year={2022}
-}
-```
-</details>
-
-<details><summary>Table of contents</summary>
-  
-- [RNAErnie](#rnaernie)
-- [RNA-FM](#rna-fm)
-  - [Create Environment with Conda ](#create-environment-with-conda-)
-  - [Access pre-trained models. ](#access-pre-trained-models-)
-  - [Apply RNA-FM with Existing Scripts. ](#apply-rna-fm-with-existing-scripts-)
-    - [1. Embedding Extraction. ](#1-embedding-extraction-)
-    - [2. Downstream Prediction - RNA secondary structure. ](#2-downstream-prediction---rna-secondary-structure-)
-    - [3. Online Version - RNA-FM server. ](#3-online-version---rna-fm-server-)
-  - [Quick Start for Further Development. ](#quick-start-for-further-development-)
-  - [Citations ](#citations-)
-  - [License ](#license-)
-</details>
-
-## Create Environment with Conda <a name="Setup_Environment"></a>
 First, download the repository and create the environment.
 ```
-git clone https://github.com/ml4bio/RNA-FM.git
-cd ./RNA-FM
+git clone https://github.com/CatIIIIIIII/RNAErnie.git
+cd ./RNAErnie
 conda env create -f environment.yml
 ```
-Then, activate the "RNA-FM" environment and enter into the workspace.
+Then, activate the "RNA-FM" environment.
 ```
 conda activate RNA-FM
-cd ./redevelop
 ```
-## Access pre-trained models. <a name="Available_Pretrained_Models"></a>
-Download pre-trained models from [this gdrive link](https://drive.google.com/drive/folders/1VGye74GnNXbUMKx6QYYectZrY7G2pQ_J?usp=share_link) and place the pth files into the `pretrained` folder.
 
-## Apply RNA-FM with Existing Scripts. <a name="Usage"></a>
-### 1. Embedding Extraction. <a name="RNA-FM_Embedding_Generation"></a>
-```
-python launch/predict.py --config="pretrained/extract_embedding.yml" \
---data_path="./data/examples/example.fasta" --save_dir="./resuts" \
---save_frequency 1 --save_embeddings
-```
-RNA-FM embeddings with shape of (L,640) will be saved in the `$save_dir/representations`.
+## Pre-training <a name="Pre-training"></a>
+### 1. Data Preparation <a name="Data_Preparation"></a>
+You can download my pretraining dataset from [Google Drive](https://drive.google.com/file/d/17nGJz0NW-Kd_Z3wAFhzeW5AUNAka6Yed/view?usp=sharing) and place the `.fasta` files in the `./data/pre_random` folder.
 
-### 2. Downstream Prediction - RNA secondary structure. <a name="RNA_Secondary_Structure_Prediction"></a>
+### 2. Pre-training <a name="Pre-training"></a>
+Pretrain RNAErnie on selected RNAcentral datasets (nts<=512) with the following command:
 ```
-python launch/predict.py --config="pretrained/ss_prediction.yml" \
---data_path="./data/examples/example.fasta" --save_dir="./resuts" \
---save_frequency 1
+python run_pretrain.py \
+    --dataset_dir=./data/pre_random \
+    --k_mer=1 \
+    --vocab_path=./data/vocab/ \
+    --max_seq_length=512 \
+    --pre_strategy=BERT,ERNIE,MOTIF \
+    --num_groups=86 \
+    --motif_files=ATtRACT,SpliceAid,Statistics \
+    --output_dir=./output \
+    --per_device_train_batch_size=50 \
+    --learning_rate=0.0001 \
+    --save_steps=1000
 ```
-The predicted probability maps will be saved in form of `.npy` files, and the post-processed binary predictions will be saved in form of `.ct` files. You can find them in the `$save_dir/r-ss`.
+To use multi-gpu training, you can add the following arguments:
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch run_pre
+train.py 
+```
+where `CUDA_VISIBLE_DEVICES` specifies the GPU ids you want to use.
+### 3. Download Pre-trained Models <a name="Download_Pre-trained_Models"></a>
+Our pre-trained model with BERT, ERNIE and MOTIF masking strategies could be downloaded from [this gdrive link](https://drive.google.com/drive/folders/1Ls5k7hv83BLRTznB4XcegIa2yKkU40Ls?usp=drive_link) and place the `.pdparams` and `.json` files in the `./output/BERT,ERNIE,MOTIF,PROMPT` folder.
 
-### 3. Online Version - RNA-FM server. <a name="Server"></a>
-If you have any trouble with the deployment of the local version of RNA-FM, you can access its online version from this link, [RNA-FM server](https://proj.cse.cuhk.edu.hk/rnafm/#/).
-You can easily submit jobs on the server and download results from it afterwards, without setting up environment and occupying any computational resources.
+### 4. Extract RNA Sequence Embeddings <a name="RNA_sequence_embedding"></a>
 
+Then you could extract embeddings of given RNA sequences or from `.fasta` file with the following codes:
+```python
+from rna_ernie import BatchConverter
+from paddlenlp.transformers import ErnieModel
+# ========== Set device
+paddle.set_device("gpu")
 
-## Quick Start for Further Development. <a name="Quick_Start"></a>
-PyTorch is the prerequisite package which you must have installed to use this repository.
-You can install `rna-fm` in your own environment with the following pip command if you just want to
-use the pre-trained language model. 
-you can either install rna-fm from PIPY:
-```
-pip install rna-fm
-```
-or install `rna-fm` from github:
-```
-cd ./RNA-FM
-pip install .
-```
-After installation, you can load the RNA-FM and extract its embeddings with the following code:
-```
-import torch
-import fm
-
-# Load RNA-FM model
-model, alphabet = fm.pretrained.rna_fm_t12()
-batch_converter = alphabet.get_batch_converter()
-model.eval()  # disables dropout for deterministic results
-
-# Prepare data
+# ========== Prepare Data
 data = [
     ("RNA1", "GGGUGCGAUCAUACCAGCACUAAUGCCCUCCUGGGAAGUCCUCGUGUUGCACCCCU"),
     ("RNA2", "GGGUGUCGCUCAGUUGGUAGAGUGCUUGCCUGGCAUGCAAGAAACCUUGGUUCAAUCCCCAGCACUGCA"),
     ("RNA3", "CGAUUCNCGUUCCC--CCGCCUCCA"),
 ]
-batch_labels, batch_strs, batch_tokens = batch_converter(data)
+# data = "./data/ft/seq_cls/nRC/test.fa"
 
-# Extract embeddings (on CPU)
-with torch.no_grad():
-    results = model(batch_tokens, repr_layers=[12])
-token_embeddings = results["representations"][12]
-```
-More tutorials can be found from [https://ml4bio.github.io/RNA-FM/](https://ml4bio.github.io/RNA-FM/). The related notebooks are stored in the `tutorials` folder. 
+# ========== Batch Converter
+batch_converter = BatchConverter(k_mer=1,
+                                  vocab_path="./data/vocab/vocab_1MER.txt",
+                                  batch_size=256,
+                                  max_seq_len=512)
 
-## Citations <a name="citations"></a>
+# ========== RNAErnie Model
+rna_ernie = ErnieModel.from_pretrained("output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final/")
 
-If you find the models useful in your research, we ask that you cite the relevant paper:
-
-For RNA-FM:
-
-```bibtex
-@article{chen2022interpretable,
-  title={Interpretable rna foundation model from unannotated data for highly accurate rna structure and function predictions},
-  author={Chen, Jiayang and Hu, Zhihang and Sun, Siqi and Tan, Qingxiong and Wang, Yixuan and Yu, Qinze and Zong, Licheng and Hong, Liang and Xiao, Jin and King, Irwin and others},
-  journal={arXiv preprint arXiv:2204.00300},
-  year={2022}
-}
+# call batch_converter to convert sequences to batch inputs
+for names, _, inputs_ids in batch_converter(data):
+    with paddle.no_grad():
+        # extract whole sequence embeddings
+        embeddings = rna_ernie(inputs_ids)[0].detach()
+        # extract [CLS] token embedding
+        embeddings_cls = embeddings[:, 0, :]
 ```
 
-The model of this code builds on the [esm](https://github.com/facebookresearch/esm) sequence modeling framework. 
-And we use [fairseq](https://github.com/pytorch/fairseq) sequence modeling framework to train our RNA language modeling.
-We very appreciate these two excellent works!
 
-## License <a name="license"></a>
-
-This source code is licensed under the MIT license found in the `LICENSE` file
-in the root directory of this source tree.
