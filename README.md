@@ -20,10 +20,10 @@ cd ./RNAErnie
 conda env create -f environment.yml
 ```
 
-Then, activate the "RNA-FM" environment.
+Then, activate the "RNAErnie" environment.
 
 ```bash
-conda activate RNA-FM
+conda activate RNAErnie
 ```
 
 ## Pre-training
@@ -56,8 +56,7 @@ python run_pretrain.py \
 To use multi-gpu training, you can add the following arguments:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch run_pre
-train.py 
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m paddle.distributed.launch run_pretrain.py 
 ```
 
 where `CUDA_VISIBLE_DEVICES` specifies the GPU ids you want to use.
