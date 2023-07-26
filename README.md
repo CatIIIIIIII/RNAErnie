@@ -8,7 +8,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ## Installation
 
-### Use Docker Image (Strongly Recommended)
+<!-- ### Use Docker Image (Strongly Recommended) -->
 
 ### Create Environment with Conda
 
@@ -214,6 +214,8 @@ python run_ssp.py \
     --learning_rate=0.001 \
     --output=./output_ft/ssp
 ```
+
+Note that we use `interface.*.so` compiled from [mxfold2](https://github.com/mxfold/mxfold2). If you system could not run the `interface.*.so` file, you could download the source code from [here]() and compile it by yourself. Then copy the generated `interface.*.so` file to `./` path.
 
 #### 3. Evaluation
 
