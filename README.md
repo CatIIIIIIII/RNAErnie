@@ -229,3 +229,5 @@ python run_ssp.py \
     --model_name=./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
     --train=False
 ```
+
+If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
