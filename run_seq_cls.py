@@ -142,7 +142,10 @@ if __name__ == "__main__":
     args.output = osp.join(osp.join(args.output, args.dataset), ct)
     args.num_classes = NUM_CLASSES[args.dataset]
     if args.max_seq_len == 0:
-        args.max_seq_len = MAX_SEQ_LEN[args.dataset]
+        if args.use_chunk:
+            args.max_seq_len = MAX_SEQ_LEN[args.dataset]
+        else:
+            args.max_seq_len = MAX_MODEL_LEN
     args.visualdl_dir = osp.join(args.output, args.visualdl_dir)
     print_config(args, "RNA Sequence Classification")
 
