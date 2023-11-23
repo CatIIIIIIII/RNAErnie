@@ -5,21 +5,21 @@ Author: wangning(wangning.roci@gmail.com)
 Date  : 2022/9/8 1:21 PM
 """
 
-
+# built-in modules
 import random
 from paddlenlp.data import Stack
 import numpy as np
 import os.path as osp
 import collections
 from dataclasses import dataclass, field
-
+# 3rd-party modules
 from Bio import SeqIO
-
+# paddle modules
 import paddle
 from paddle.io import DistributedBatchSampler, Dataset
 from paddlenlp.trainer import Trainer
 from paddlenlp.trainer import TrainingArguments
-
+# self-defined modules
 from dataset_utils import seq2kmer
 
 
@@ -56,15 +56,7 @@ class PreTrainingArguments(TrainingArguments):
 
 
 class PreFastaDataset(Dataset):
-    def __init__(self,
-                 fasta_dir,
-                 prefix,
-                 num_file,
-                 num_samples_per_file,
-                 tokenizer,
-                 max_model_length=512,
-                 num_specials=4,
-                 replace=True):
+    def __init__(self, fasta_dir, prefix, num_file, num_samples_per_file, tokenizer, max_model_length=512, num_specials=4, replace=True):
         """init pretrain fasta dataset
 
         Args:
@@ -313,13 +305,7 @@ class PreDataCollator:
         }
 
 
-def convert_text_to_pretrain(raw_data,
-                             tokenizer,
-                             pre_strategy,
-                             max_seq_length,
-                             masked_lm_prob,
-                             motif_tree_dict,
-                             seed):
+def convert_text_to_pretrain(raw_data, tokenizer, pre_strategy, max_seq_length, masked_lm_prob, motif_tree_dict, seed):
     """convert raw data to pretrain data
 
     Args:
@@ -391,11 +377,7 @@ def convert_text_to_pretrain(raw_data,
     return res
 
 
-def create_masked_lm_predictions_bert(tokens,
-                                      tokenizer,
-                                      masked_lm_prob,
-                                      max_predictions_per_seq,
-                                      rng):
+def create_masked_lm_predictions_bert(tokens, tokenizer, masked_lm_prob, max_predictions_per_seq, rng):
     """create masked language model predictions by BERT strategy
 
     Args:
@@ -454,12 +436,7 @@ def create_masked_lm_predictions_bert(tokens,
     return output_tokens, masked_lm_positions, masked_lm_labels
 
 
-def create_masked_lm_predictions_ernie(tokens,
-                                       tokenizer,
-                                       masked_lm_prob,
-                                       max_predictions_per_seq,
-                                       rng,
-                                       max_ngrams=3):
+def create_masked_lm_predictions_ernie(tokens, tokenizer, masked_lm_prob, max_predictions_per_seq, rng, max_ngrams=3):
     """create masked language model predictions by ERNIE strategy
 
     Args:
@@ -573,12 +550,13 @@ def create_masked_lm_predictions_ernie(tokens,
     return output_tokens, masked_lm_positions, masked_lm_labels
 
 
-def create_masked_lm_predictions_motif(tokens,
-                                       tokenizer,
-                                       masked_lm_prob,
-                                       max_predictions_per_seq,
-                                       motif_trees,
-                                       np_rng):
+def create_masked_lm_predictions_motif(
+        tokens,
+        tokenizer,
+        masked_lm_prob,
+        max_predictions_per_seq,
+        motif_trees,
+        np_rng):
     """create masked language model predictions by motif strategy
 
     Args:

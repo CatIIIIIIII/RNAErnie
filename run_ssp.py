@@ -49,11 +49,11 @@ parser = argparse.ArgumentParser(
 # model args
 parser.add_argument('--model_name_or_path',
                     type=str,
-                    default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final",
+                    default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final",
                     help='The build-in pretrained LM or the path to local model parameters.')
 parser.add_argument('--model_path',
                     type=str,
-                    default="./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT",
+                    default="./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT/model_state.pdparams",
                     help='The build-in pretrained LM or the path to local model parameters.')
 parser.add_argument('--two_stage', type=str2bool, default=False, help='Whether use two stage.')
 parser.add_argument('--top_k', type=int, default=3, help='Select top k indications for stage two.')
@@ -81,7 +81,7 @@ parser.add_argument('--device',
 
 parser.add_argument('--num_train_epochs', type=int, default=50, help='The number of epoch for training.')
 parser.add_argument('--batch_size', type=int, default=1, help='The number of samples used per step, must be 1.')
-parser.add_argument('--learning_rate', type=float, default=0.001, help='the learning rate for optimizer (default: 0.001)')
+parser.add_argument('--lr', type=float, default=0.001, help='the learning rate for optimizer (default: 0.001)')
 parser.add_argument('--l1-weight', type=float, default=0., help='the weight for L1 regularization (default: 0)')
 parser.add_argument('--l2-weight', type=float, default=0., help='the weight for L2 regularization (default: 0)')
 parser.add_argument('--loss_pos_paired',
@@ -125,8 +125,6 @@ if __name__ == "__main__":
     args.output = osp.join(osp.join(args.output, args.task_name), ct)
     args.dataset_train = osp.join(args.dataset_dir, DATASETS[args.task_name][0])
     args.dataset_test = osp.join(args.dataset_dir, DATASETS[args.task_name][1])
-    if args.model_path.split(".") != "pdparams":
-        args.model_path = osp.join(args.model_path, "model_state.pdparams")
     args.visualdl_dir = osp.join(args.output, args.visualdl_dir)
     print_config(args, "RNA Secondary Structure Prediction.")
 

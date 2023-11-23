@@ -315,7 +315,7 @@ class ErnieForLongSequenceClassification(ErniePretrainedModel):
         self.num_classes = num_classes
         self.ernie = ernie  # allow ernie to be config
         self.dropout = nn.Dropout(self.ernie.config["hidden_dropout_prob"])
-        self.classifier = nn.Linear(self.ernie.config["hidden_size"], self.num_classes)
+        self.classifier = nn.Linear(self.ernie.config["hidden_size"], num_classes)
         self.apply(self.init_weights)
 
     def forward(self, input_ids):

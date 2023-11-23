@@ -82,7 +82,7 @@ parser = argparse.ArgumentParser('Implementation of RNA sequence classification.
 # model args
 parser.add_argument('--model_name_or_path',
                     type=str,
-                    default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final",
+                    default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final",
                     help='The build-in pretrained LM or the path to local model parameters.')
 parser.add_argument('--max_seq_len', type=int, default=0,
                     help='The maximum length for model input, including special tokens.')
@@ -176,9 +176,13 @@ if __name__ == "__main__":
             model = ErnieForSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
     else:
         if args.dataset != "nRC" and args.use_chunk:
-            model = ErnieForLongSequenceClassification.from_pretrained(args.model_path, num_classes=args.num_classes)
+            model = ErnieForLongSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
+            model.set_state_dict(paddle.load(args.model_path))
+            
         else:
-            model = ErnieForSequenceClassification.from_pretrained(args.model_path, num_classes=args.num_classes)
+            model = ErnieForSequenceClassification.from_pretrained(args.model_name_or_path, num_classes=args.num_classes)
+            model.set_state_dict(paddle.load(args.model_path))
+            
     indicator = IndicatorClassifier(model_name_or_path=args.model_name_or_path) if args.two_stage else None
     ensemble = MajorityVoter() if args.two_stage else None
     # load loss function

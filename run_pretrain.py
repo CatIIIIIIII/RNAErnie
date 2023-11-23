@@ -4,14 +4,14 @@ This module runs RNAErnie pretrain.
 Author: wangning(wangning.roci@gmail.com)
 Date  : 2022/9/8 1:21 PM
 """
-
+# built-in modules
 import argparse
 import os
 import os.path as osp
 from functools import partial
-
+# 3rd-party modules
 from ahocorapy.keywordtree import KeywordTree
-
+# paddle modules
 import paddle
 from paddlenlp.transformers import (
     ErnieModel,
@@ -22,7 +22,7 @@ from paddlenlp.transformers import (
 from paddlenlp.trainer import PdArgumentParser, get_last_checkpoint
 from paddlenlp.datasets import MapDataset
 from paddlenlp.utils.log import logger
-
+# self-defined modules
 from arg_utils import (
     str2bool,
     str2list,
@@ -73,7 +73,7 @@ RNA_LABELS = ['RNase_MRP_RNA',
               'vault_RNA']
 
 # ========== Configuration
-parser = argparse.ArgumentParser('Implementation of RNAErnie pretrain.')
+parser = argparse.ArgumentParser('Implementation of RNA pretrain.')
 # model args
 parser.add_argument('--model_name_or_path', type=str, default="ernie-1.0",
                     help='The build-in pretrained LM or the path to local model parameters.')
@@ -139,172 +139,172 @@ parser.add_argument('--max_grad_norm', type=float, default=1.0, help='The maximu
 parser.add_argument('--weight_decay', type=float, default=0.0, help='Weight decay if we apply some.')
 args = parser.parse_args()
 
-if __name__ == "__main__":
-    # ========== post process
-    if ".txt" not in args.vocab_path:
-        args.vocab_path = osp.join(args.vocab_path,
-                                   "vocab_" + str(args.k_mer) + "MER.txt")  # expected: "./data/vocab/vocab_6MER.txt"
+# post process
+if ".txt" not in args.vocab_path:
+    args.vocab_path = osp.join(args.vocab_path,
+                               "vocab_" + str(args.k_mer) + "MER.txt")  # expected: "./data/vocab/vocab_6MER.txt"
 
-    args.output_dir = osp.join(args.output_dir, list2str(args.pre_strategy))  # expected: "./output/bert,ernie"
-    # expected: "./output/bert,ernie/runs/Oct08_21-19-09_suzhou-5"
-    args.logging_dir = osp.join(args.output_dir, default_logdir())
+args.output_dir = osp.join(args.output_dir, list2str(args.pre_strategy))  # expected: "./output/bert,ernie"
+# expected: "./output/bert,ernie/runs/Oct08_21-19-09_suzhou-5"
+args.logging_dir = osp.join(args.output_dir, default_logdir())
 
-    args.per_device_train_batch_size = args.batch_size
-    args.per_device_eval_batch_size = args.batch_size
+args.per_device_train_batch_size = args.batch_size
+args.per_device_eval_batch_size = args.batch_size
 
-    logger.debug("Loading configuration.")
-    PdAparser = PdArgumentParser((PreTrainingArguments))
-    training_args, = PdAparser.parse_args_into_dataclasses()
+logger.debug("Loading configuration.")
+PdAparser = PdArgumentParser((PreTrainingArguments))
+training_args, = PdAparser.parse_args_into_dataclasses()
 
-    # if config.dataset in DATASETS:
-    # if you custom you hyper-parameters in parser, it will overwrite all args.
-    logger.debug("Over-writing arguments by user config!")
-    for arg in vars(training_args):
-        if arg in vars(args):
-            setattr(training_args, arg, getattr(args, arg))
+# if config.dataset in DATASETS:
+# if you custom you hyper-parameters in parser, it will overwrite all args.
+logger.debug("Over-writing arguments by user config!")
+for arg in vars(training_args):
+    if arg in vars(args):
+        setattr(training_args, arg, getattr(args, arg))
 
-    # ========== Set random seeds
-    logger.debug("Set random seeds.")
-    set_seed(args.seed)
+# ========== Set random seeds
+logger.debug("Set random seeds.")
+set_seed(args.seed)
 
-    # ========== Set device
-    logger.debug("Set device.")
-    paddle.set_device(args.device)
+# ========== Set device
+logger.debug("Set device.")
+paddle.set_device(args.device)
 
-    # ========== Set multi-gpus environment
-    logger.debug("Set multi-gpus environment.")
-    if paddle.distributed.get_world_size() > 1:
-        paddle.distributed.init_parallel_env()
+# ========== Set multi-gpus environment
+logger.debug("Set multi-gpus environment.")
+if paddle.distributed.get_world_size() > 1:
+    paddle.distributed.init_parallel_env()
 
-    # ========== Log on each process the small summary:
-    logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, world_size: {training_args.world_size}, "
-        +
-        f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
-    )
+# ========== Log on each process the small summary:
+logger.warning(
+    f"Process rank: {training_args.local_rank}, device: {training_args.device}, world_size: {training_args.world_size}, "
+    +
+    f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+)
 
-    # ========== Detecting last checkpoint.
-    logger.debug("Detecting last checkpoint.")
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-        if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
-            logger.info(
-                f"Checkpoint detected, resuming training at {last_checkpoint}. "
-                f"To avoid this behavior, change the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
-            )
-
-    # ========== Build tokenizer, model, criterion
-    logger.debug("Building tokenizer, model, criterion.")
-    # load tokenizer
-    logger.debug("Loading tokenization.")
-    tokenizer = NUCTokenizer(args.k_mer, args.vocab_path)
-    assert tokenizer.vocab_size == args.vocab_size, "Vocab size of tokenizer must be equal to args.vocab_size."
-    # load base model, pretrain model
-    base_class, model_class, criterion_class = ErnieModel, ErnieForMaskedLM, ErniePretrainingCriterion
-    pretrained_models_list = list(model_class.pretrained_init_configuration.keys())
-    if args.model_name_or_path in pretrained_models_list:
-        model_config = model_class.pretrained_init_configuration[args.model_name_or_path]
-        model_config["vocab_size"] = tokenizer.vocab_size
-        model = model_class(base_class(**model_config))
-    else:
-        model = model_class.from_pretrained(
-            args.model_name_or_path,
+# ========== Detecting last checkpoint.
+logger.debug("Detecting last checkpoint.")
+last_checkpoint = None
+if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
+    last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+        logger.info(
+            f"Checkpoint detected, resuming training at {last_checkpoint}. "
+            f"To avoid this behavior, change the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
         )
-    # load criterion
-    criterion = criterion_class(with_nsp_loss=False)
-    # log model config
-    model_config = model.get_model_config()["init_args"][0]
-    for k, v in model_config.items():
-        setattr(args, k, v)
 
-    # ========== Prepare data
-    # load motifs
-    logger.debug("Preparing data.")
-    motif_tree_dict = None
-    if "MOTIF" in args.pre_strategy:
-        motif_dict = load_motif(motif_dir=args.motif_dir,
-                                motif_name=args.motif_files,
-                                tokenizer=tokenizer)
+# ========== Build tokenizer, model, criterion
+logger.debug("Building tokenizer, model, criterion.")
+# load tokenizer
+logger.debug("Loading tokenization.")
+tokenizer = NUCTokenizer(args.k_mer, args.vocab_path)
+assert tokenizer.vocab_size == args.vocab_size, "Vocab size of tokenizer must be equal to args.vocab_size."
 
-        motif_tree_dict = {}
-        motif_tree = KeywordTree()
-        for k, v in motif_dict.items():
-            if k != "Statistics":
-                for m in v:
-                    motif_tree.add(m)
-        motif_tree.finalize()
-        motif_tree_dict["DataBases"] = motif_tree
-
-        motif_tree = KeywordTree()
-        for k, v in motif_dict.items():
-            if k == "Statistics":
-                for m in v:
-                    motif_tree.add(m)
-        motif_tree.finalize()
-        motif_tree_dict["Statistics"] = motif_tree
-
-    # load datasets
-    trans_func = partial(
-        convert_text_to_pretrain,
-        tokenizer=tokenizer,
-        pre_strategy=args.pre_strategy,
-        max_seq_length=args.max_seq_length,
-        masked_lm_prob=args.masked_lm_prob,
-        motif_tree_dict=motif_tree_dict,
-        seed=training_args.seed,
+# load base model, pretrain model
+base_class, model_class, criterion_class = ErnieModel, ErnieForMaskedLM, ErniePretrainingCriterion
+pretrained_models_list = list(model_class.pretrained_init_configuration.keys())
+if args.model_name_or_path in pretrained_models_list:
+    model_config = model_class.pretrained_init_configuration[args.model_name_or_path]
+    model_config["vocab_size"] = tokenizer.vocab_size
+    model = model_class(base_class(**model_config))
+else:
+    model = model_class.from_pretrained(
+        args.model_name_or_path,
     )
-    raw_dataset = PreFastaDataset(
-        fasta_dir=args.dataset_dir,
-        prefix=args.dataset_name,
-        num_file=args.num_groups,
-        num_samples_per_file=args.num_samples_per_file,
-        tokenizer=tokenizer,
-        num_specials=4 if "PROMPT" in args.pre_strategy else 2
-    )
-    m_dataset = MapDataset(raw_dataset)
-    m_dataset.map(trans_func)
+# load criterion
+criterion = criterion_class(with_nsp_loss=False)
+# log model config
+model_config = model.get_model_config()["init_args"][0]
+for k, v in model_config.items():
+    setattr(args, k, v)
 
-    # ========== Create the learning_rate scheduler and optimizer
-    logger.debug("Creating learning rate scheduler and optimizer.")
-    # scheduler
-    if training_args.max_steps == -1:
-        total_train_batch_size = training_args.per_device_train_batch_size * \
-            training_args.gradient_accumulation_steps * \
-            training_args.world_size
-        training_args.max_steps = len(m_dataset) // int(total_train_batch_size) * training_args.num_train_epochs
-    if training_args.decay_steps == -1:
-        training_args.decay_steps = training_args.max_steps
-    warmup_steps = int(training_args.warmup_ratio * training_args.max_steps)
-    lr_scheduler = LinearAnnealingWithWarmupDecay(
-        training_args.learning_rate,
-        training_args.min_learning_rate,
-        warmup_step=warmup_steps,
-        decay_step=training_args.decay_steps
-    )
+# ========== Prepare data
+# load motifs
+logger.debug("Preparing data.")
+motif_tree_dict = None
+if "MOTIF" in args.pre_strategy:
+    motif_dict = load_motif(motif_dir=args.motif_dir,
+                            motif_name=args.motif_files,
+                            tokenizer=tokenizer)
 
-    # ========== Training
-    # training_args.print_config(args, "Data")
+    motif_tree_dict = {}
+    motif_tree = KeywordTree()
+    for k, v in motif_dict.items():
+        if k != "Statistics":
+            for m in v:
+                motif_tree.add(m)
+    motif_tree.finalize()
+    motif_tree_dict["DataBases"] = motif_tree
 
-    logger.debug("Start training.")
-    _collate_fn = PreDataCollator(tokenizer.pad_token_id)
-    # train model
-    trainer = PretrainingTrainer(
-        model=model,
-        criterion=CriterionWrapper(criterion),
-        args=training_args,
-        data_collator=_collate_fn,
-        train_dataset=m_dataset,
-        optimizers=(None, lr_scheduler),
-        tokenizer=tokenizer,
-    )
-    # checkpoints
-    checkpoint = None
-    if training_args.resume_from_checkpoint is not None:
-        checkpoint = training_args.resume_from_checkpoint
-    elif last_checkpoint is not None:
-        checkpoint = last_checkpoint
-    # start
-    train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    metrics = train_result.metrics
-    trainer.save_model()
+    motif_tree = KeywordTree()
+    for k, v in motif_dict.items():
+        if k == "Statistics":
+            for m in v:
+                motif_tree.add(m)
+    motif_tree.finalize()
+    motif_tree_dict["Statistics"] = motif_tree
+
+# load datasets
+trans_func = partial(
+    convert_text_to_pretrain,
+    tokenizer=tokenizer,
+    pre_strategy=args.pre_strategy,
+    max_seq_length=args.max_seq_length,
+    masked_lm_prob=args.masked_lm_prob,
+    motif_tree_dict=motif_tree_dict,
+    seed=training_args.seed,
+)
+raw_dataset = PreFastaDataset(
+    fasta_dir=args.dataset_dir,
+    prefix=args.dataset_name,
+    num_file=args.num_groups,
+    num_samples_per_file=args.num_samples_per_file,
+    tokenizer=tokenizer,
+    num_specials=4 if "PROMPT" in args.pre_strategy else 2
+)
+m_dataset = MapDataset(raw_dataset)
+m_dataset.map(trans_func)
+
+# ========== Create the learning_rate scheduler and optimizer
+logger.debug("Creating learning rate scheduler and optimizer.")
+# scheduler
+if training_args.max_steps == -1:
+    total_train_batch_size = training_args.per_device_train_batch_size * \
+        training_args.gradient_accumulation_steps * \
+        training_args.world_size
+    training_args.max_steps = len(m_dataset) // int(total_train_batch_size) * training_args.num_train_epochs
+if training_args.decay_steps == -1:
+    training_args.decay_steps = training_args.max_steps
+warmup_steps = int(training_args.warmup_ratio * training_args.max_steps)
+lr_scheduler = LinearAnnealingWithWarmupDecay(
+    training_args.learning_rate,
+    training_args.min_learning_rate,
+    warmup_step=warmup_steps,
+    decay_step=training_args.decay_steps
+)
+
+# ========== Training
+# training_args.print_config(args, "Data")
+
+logger.debug("Start training.")
+_collate_fn = PreDataCollator(tokenizer.pad_token_id)
+# train model
+trainer = PretrainingTrainer(
+    model=model,
+    criterion=CriterionWrapper(criterion),
+    args=training_args,
+    data_collator=_collate_fn,
+    train_dataset=m_dataset,
+    optimizers=(None, lr_scheduler),
+    tokenizer=tokenizer,
+)
+# checkpoints
+checkpoint = None
+if training_args.resume_from_checkpoint is not None:
+    checkpoint = training_args.resume_from_checkpoint
+elif last_checkpoint is not None:
+    checkpoint = last_checkpoint
+# start
+train_result = trainer.train(resume_from_checkpoint=checkpoint)
+metrics = train_result.metrics
+trainer.save_model()

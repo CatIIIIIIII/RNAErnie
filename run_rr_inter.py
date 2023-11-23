@@ -44,7 +44,7 @@ MAX_SEQ_LEN = {
 logger.info("Loading configuration.")
 parser = argparse.ArgumentParser('Implementation of RNA-RNA Interaction prediction.')
 # model args
-parser.add_argument('--model_name_or_path', type=str, default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final/",
+parser.add_argument('--model_name_or_path', type=str, default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final/",
                     help='The pretrain model for feature extraction.')
 parser.add_argument('--with_pretrain', type=str2bool, default=True, help='Whether use original channels.')
 parser.add_argument('--proj_size', type=int, default=64, help='Project pretrained features to this size.')
@@ -56,7 +56,7 @@ parser.add_argument('--model_path',
 # data args
 parser.add_argument('--dataset', type=str, default="MirTarRAW", choices=DATASETS,
                     help='The file list to train.')
-parser.add_argument('--dataset_dir', type=str, default="./data/ft/rr_inter/", help='Local path for dataset.')
+parser.add_argument('--dataset_dir', type=str, default="./data/ft/rr/", help='Local path for dataset.')
 parser.add_argument('--k_mer', type=int, default=1, help='Number of continuous nucleic acids to form a token.')
 parser.add_argument('--vocab_path', type=str, default="./data/vocab/", help='Local path for vocab file.')
 parser.add_argument('--dataloader_num_workers', type=int, default=16, help='The number of threads used by dataloader.')

@@ -26,6 +26,24 @@ Then, activate the "RNAErnie" environment.
 conda activate RNAErnie
 ```
 
+or you could 
+
+### Pull from Docker
+First clone the repository:
+```bash
+git clone https://github.com/CatIIIIIIII/RNAErnie.git
+```
+Then pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general):
+```bash
+sudo docker pull nwang227/rnaernie:1.1
+```
+Finally run the container with data volumn mounted:
+```bash
+sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nwang227/rnaernie:1.1 /bin/bash
+```
+TODO:
+For python version conflict, RNA secondary structure prediction task is not available in docker image. We will fix in the future.
+
 ## Pre-training
 
 ### 1. Data Preparation
@@ -40,13 +58,6 @@ Pretrain RNAErnie on selected RNAcentral datasets (nts<=512) with the following 
 
 ```bash
 python run_pretrain.py \
-    --dataset_dir=./data/pre_random \
-    --k_mer=1 \
-    --vocab_path=./data/vocab/ \
-    --max_seq_length=512 \
-    --pre_strategy=BERT,ERNIE,MOTIF \
-    --num_groups=86 \
-    --motif_files=ATtRACT,SpliceAid,Statistics \
     --output_dir=./output \
     --per_device_train_batch_size=50 \
     --learning_rate=0.0001 \
@@ -127,7 +138,7 @@ Fine-tune RNAErnie on RNA sequence classification task with the following comman
 python run_seq_cls.py \
     --dataset=nRC \
     --dataset_dir=./data/ft/seq_cls \
-    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
+    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final \
     --train=True \
     --batch_size=50 \
     --num_train_epochs=100 \
@@ -149,7 +160,8 @@ Then you could evaluate the performance with the following codes:
 python run_seq_cls.py \
     --dataset=nRC \
     --dataset_dir=./data/ft/seq_cls \
-    --model_path=./output_ft/seq_cls/nRC/BERT,ERNIE,MOTIF,PROMPT \
+    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final \
+    --model_path=./output_ft/seq_cls/nRC/BERT,ERNIE,MOTIF,PROMPT/model_state.pdparams \
     --train=False \
     --batch_size=50
 ```
@@ -170,11 +182,11 @@ Fine-tune RNAErnie on RNA-RNA interaction task with the following command:
 python run_rr_inter.py \
     --dataset=MirTarRAW \
     --dataset_dir=./data/ft/rr_inter \
-    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
+    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final \
     --train=True \
     --batch_size=256 \
     --num_train_epochs=100 \
-    --learning_rate=0.001 \
+    --lr=0.001 \
     --output=./output_ft/rr_inter
 ```
 
@@ -188,6 +200,7 @@ Then you could evaluate the performance with the following codes:
 python run_rr_inter.py \
     --dataset=MirTarRAW \
     --dataset_dir=./data/ft/rr_inter \
+    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final \
     --model_path=./output_ft/rr_inter/MirTarRAW/BERT,ERNIE,MOTIF,PROMPT \
     --train=False \
     --batch_size=256
@@ -207,10 +220,10 @@ Adapt RNAErnie on RNA secondary structure prediction task with the following com
 python run_ssp.py \
     --task_name=RNAStrAlign \
     --dataset_dir=./data/ft/ssp \
-    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
+    --model_name_or_path=./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final \
     --train=True \
     --num_train_epochs=50 \
-    --learning_rate=0.001 \
+    --lr=0.001 \
     --output=./output_ft/ssp
 ```
 
@@ -226,7 +239,6 @@ Then you could evaluate the performance with the following codes:
 python run_ssp.py \
     --task_name=RNAStrAlign \
     --dataset_dir=./data/ft/ssp \
-    --model_name=./output_ft/ssp/RNAStrAlign/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final \
     --train=False
 ```
 

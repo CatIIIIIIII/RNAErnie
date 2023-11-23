@@ -456,3 +456,13 @@ class RRInterTrainer(BaseTrainer):
 
         time_ed = time.time() - time_st
         print(log.format(**results), "; Time: {:.4f}s".format(time_ed))
+
+        # args = {}
+        # log = 'Test\t'
+        # for k, v in metrics_dataset.items():
+        #     log += k + ": {" + k + ":.4f}\t"
+        #     args[k] = v
+        # print(log.format(**args))
+
+        # attn_dataset = paddle.concat(attn_dataset, axis=0)
+        # return names_dataset, outputs_dataset, labels_dataset, attn_dataset

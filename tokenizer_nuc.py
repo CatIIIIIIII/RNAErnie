@@ -179,6 +179,52 @@ class NUCTokenizer(PretrainedTokenizer):
 
         return split_tokens
 
+    # def convert_tokens_to_string(self, tokens):
+    #     r"""
+    #     Converts a sequence of tokens (list of string) in a single string. Since
+    #     the usage of WordPiece introducing `##` to concat subwords, also remove
+    #     `##` when converting.
+
+    #     Args:
+    #         tokens (List[str]): A list of string representing tokens to be converted.
+
+    #     Returns:
+    #         str: Converted string from tokens.
+
+    #     Examples:
+    #         .. code-block::
+
+    #             from paddlenlp.transformers import ErnieTokenizer
+    #             tokenizer = ErnieTokenizer.from_pretrained('ernie-1.0')
+
+    #             tokens = tokenizer.tokenize('He was a puppeteer')
+    #             strings = tokenizer.convert_tokens_to_string(tokens)
+    #             #he was a puppeteer
+
+    #     """
+    #     out_string = " ".join(tokens).replace(" ##", "").strip()
+    #     return out_string
+
+    # def num_special_tokens_to_add(self, pair=False):
+    #     r"""
+    #     Returns the number of added tokens when encoding a sequence with special tokens.
+
+    #     Note:
+    #         This encodes inputs and checks the number of added tokens, and is therefore not efficient.
+    #         Do not put this inside your training loop.
+
+    #     Args:
+    #         pair (bool, optional):
+    #             Whether the input is a sequence pair or a single sequence.
+    #             Defaults to `False` and the input is a single sequence.
+
+    #     Returns:
+    #         int: Number of tokens added to sequences
+    #     """
+    #     token_ids_0 = []
+    #     token_ids_1 = []
+    #     return len(self.build_inputs_with_special_tokens(token_ids_0, token_ids_1 if pair else None))
+
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         r"""
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
@@ -204,3 +250,85 @@ class NUCTokenizer(PretrainedTokenizer):
         _cls = [self.cls_token_id]
         _sep = [self.sep_token_id]
         return _cls + token_ids_0 + _sep + token_ids_1 + _sep
+
+    # def get_special_tokens_mask(self, token_ids_0, token_ids_1=None, already_has_special_tokens=False):
+    #     r"""
+    #     Retrieves sequence ids from a token list that has no special tokens added. This method is called when adding
+    #     special tokens using the tokenizer ``encode`` methods.
+
+    #     Args:
+    #         token_ids_0 (List[int]):
+    #             List of ids of the first sequence.
+    #         token_ids_1 (List[int], optinal):
+    #             Optional second list of IDs for sequence pairs.
+    #             Defaults to `None`.
+    #         already_has_special_tokens (str, optional):
+    #             Whether or not the token list is already formatted with special tokens for the model.
+    #             Defaults to `False`.
+
+    #     Returns:
+    #         List[int]:
+    #             The list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
+    #     """
+
+    #     if already_has_special_tokens:
+    #         if token_ids_1 is not None:
+    #             raise ValueError("You should not supply a second sequence if the provided sequence of "
+    #                              "ids is already formatted with special tokens for the model.")
+    #         return list(map(lambda x: 1 if x in [self.sep_token_id, self.cls_token_id] else 0, token_ids_0))
+
+    #     if token_ids_1 is not None:
+    #         return [1] + ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
+    #     return [1] + ([0] * len(token_ids_0)) + [1]
+
+    # def build_offset_mapping_with_special_tokens(self, offset_mapping_0, offset_mapping_1=None):
+    #     r"""
+    #     Build offset map from a pair of offset map by concatenating and adding offsets of special tokens.
+
+    #     An ERNIE offset_mapping has the following format:
+
+    #     - single sequence:      ``(0,0) X (0,0)``
+    #     - pair of sequences:        ``(0,0) A (0,0) B (0,0)``
+
+    #     Args:
+    #         offset_mapping_ids_0 (List[tuple]):
+    #             List of char offsets to which the special tokens will be added.
+    #         offset_mapping_ids_1 (List[tuple], optional):
+    #             Optional second list of wordpiece offsets for offset mapping pairs.
+    #             Defaults to `None`.
+
+    #     Returns:
+    #         List[tuple]: A list of wordpiece offsets with the appropriate offsets of special tokens.
+    #     """
+    #     if offset_mapping_1 is None:
+    #         return [(0, 0)] + offset_mapping_0 + [(0, 0)]
+
+    #     return [(0, 0)] + offset_mapping_0 + [(0, 0)] + offset_mapping_1 + [(0, 0)]
+
+    # def create_token_type_ids_from_sequences(self, token_ids_0, token_ids_1=None):
+    #     r"""
+    #     Create a mask from the two sequences passed to be used in a sequence-pair classification task.
+
+    #     A ERNIE sequence pair mask has the following format:
+    #     ::
+
+    #         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
+    #         | first sequence    | second sequence |
+
+    #     If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
+
+    #     Args:
+    #         token_ids_0 (List[int]):
+    #             A list of `inputs_ids` for the first sequence.
+    #         token_ids_1 (List[int], optional):
+    #             Optional second list of IDs for sequence pairs.
+    #             Defaults to `None`.
+
+    #     Returns:
+    #         List[int]: List of token_type_id according to the given sequence(s).
+    #     """
+    #     _sep = [self.sep_token_id]
+    #     _cls = [self.cls_token_id]
+    #     if token_ids_1 is None:
+    #         return len(_cls + token_ids_0 + _sep) * [0]
+    #     return len(_cls + token_ids_0 + _sep) * [0] + len(token_ids_1 + _sep) * [1]
