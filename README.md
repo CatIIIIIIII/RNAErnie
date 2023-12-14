@@ -36,23 +36,11 @@ git clone https://github.com/CatIIIIIIII/RNAErnie.git
 ```
 
 #### Step2: Prepare running environment
-Here we provide two ways to load the docker image. 
-##### [Option1] 
-Download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
+Here we provide two ways to load the docker image.
 
-```bash
-https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3
-```
+##### [Option1]
 
-and load by 
-
-```bash
-sudo docker load --input rnaernie-1.1.tar
-```
-
-##### [Option2]
-
-Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
+Or you could pull the docker image from [Docker Hub](https://hub.docker.com/r/nwang227/rnaernie) after sign in:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
@@ -67,6 +55,18 @@ sudo docker pull nwang227/rnaernie:1.1
     - Start the docker service with `systemctl start docker`
     - Then try to run the container again.
 
+##### [Option2] 
+Download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
+
+```bash
+https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3
+```
+
+and load by 
+
+```bash
+sudo docker load --input rnaernie-1.1.tar
+```
 
 #### Step3: Run 
 Run the container with data volumn mounted:
