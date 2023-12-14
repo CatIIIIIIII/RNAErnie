@@ -28,12 +28,18 @@ conda activate RNAErnie
 
 or you could 
 
-### Pull from Docker
+### Run in Docker
 First clone the repository:
 ```bash
 git clone https://github.com/CatIIIIIIII/RNAErnie.git
 ```
-Then pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general):
+Then download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing) and load by 
+
+```bash
+sudo docker load --input rnaernie-1.1.tar
+```
+
+Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
@@ -41,7 +47,17 @@ Finally run the container with data volumn mounted:
 ```bash
 sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nwang227/rnaernie:1.1 /bin/bash
 ```
-TODO:
+**NOTE**:
+1. If you encounter the error`unauthorized: authentication required`, this means that you haven't logged in your docker account to access docker hub.
+ - Sign up a docker account
+ - Login with `sudo docker login -u username --password-stdin`
+ - Then try to pull the image again.
+
+2. If you encounter the error `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docke daemon running?`, this means that you haven't started the docker service.
+    - Start the docker service with `systemctl start docker`
+    - Then try to run the container again.
+
+**TODO**:
 For python version conflict, RNA secondary structure prediction task is not available in docker image. We will fix in the future.
 
 ## Pre-training
