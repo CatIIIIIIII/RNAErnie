@@ -40,7 +40,7 @@ Here we provide two ways to load the docker image.
 
 ##### [Option1]
 
-Or you could pull the docker image from [Docker Hub](https://hub.docker.com/r/nwang227/rnaernie) after sign in:
+You could pull the docker image from [Docker Hub](https://hub.docker.com/r/nwang227/rnaernie) after sign in:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
@@ -56,7 +56,7 @@ sudo docker pull nwang227/rnaernie:1.1
     - Then try to run the container again.
 
 ##### [Option2] 
-Download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
+Or you can download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
 
 ```bash
 https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3
