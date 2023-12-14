@@ -29,21 +29,28 @@ conda activate RNAErnie
 or you could 
 
 ### Run in Docker
+1.Prepare code
 First clone the repository:
 ```bash
 git clone https://github.com/CatIIIIIIII/RNAErnie.git
 ```
-Then download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing) and load by 
+
+2.Prepare running environment
+2.1 Then download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing) or use the url as follow
+
+[https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing)
+
+and load by 
 
 ```bash
 sudo docker load --input rnaernie-1.1.tar
 ```
 
-Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
+2.2 Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
-Finally run the container with data volumn mounted:
+3.Finally run the container with data volumn mounted:
 ```bash
 sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nwang227/rnaernie:1.1 /bin/bash
 ```
