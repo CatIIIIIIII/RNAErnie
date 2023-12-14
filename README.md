@@ -39,8 +39,12 @@ git clone https://github.com/CatIIIIIIII/RNAErnie.git
 Here we provide two ways to load the docker image.
 
 ##### [Option1]
+You can directly access the docker image using this link:
+```bash
+https://hub.docker.com/r/nwang227/rnaernie
+```
 
-You could pull the docker image from [Docker Hub](https://hub.docker.com/r/nwang227/rnaernie) after sign in:
+After docker sign in, you could pull the docker image using the following command:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
