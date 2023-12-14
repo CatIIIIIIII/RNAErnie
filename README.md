@@ -29,16 +29,20 @@ conda activate RNAErnie
 or you could 
 
 ### Run in Docker
-1.Prepare code
+#### Step1: Prepare code
 First clone the repository:
 ```bash
 git clone https://github.com/CatIIIIIIII/RNAErnie.git
 ```
 
-2.Prepare running environment
-2.1 Then download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing) or use the url as follow
+#### Step2: Prepare running environment
+Here we provide two ways to load the docker image. 
+##### [Option1] 
+Download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
 
-[https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3/view?usp=sharing)
+```bash
+https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3
+```
 
 and load by 
 
@@ -46,14 +50,13 @@ and load by
 sudo docker load --input rnaernie-1.1.tar
 ```
 
-2.2 Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
+##### [Option2]
+
+Or you could pull the docker image from [Docker Hub](https://hub.docker.com/repository/docker/nwang227/rnaernie/general) after sign in:
 ```bash
 sudo docker pull nwang227/rnaernie:1.1
 ```
-3.Finally run the container with data volumn mounted:
-```bash
-sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nwang227/rnaernie:1.1 /bin/bash
-```
+
 **NOTE**:
 1. If you encounter the error`unauthorized: authentication required`, this means that you haven't logged in your docker account to access docker hub.
  - Sign up a docker account
@@ -63,6 +66,13 @@ sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nw
 2. If you encounter the error `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docke daemon running?`, this means that you haven't started the docker service.
     - Start the docker service with `systemctl start docker`
     - Then try to run the container again.
+
+
+#### Step3: Run 
+Run the container with data volumn mounted:
+```bash
+sudo docker run --gpus all --name rnaernie_docker -it -v $PWD/RNAErnie:/home/ nwang227/rnaernie:1.1 /bin/bash
+```
 
 **TODO**:
 For python version conflict, RNA secondary structure prediction task is not available in docker image. We will fix in the future.
