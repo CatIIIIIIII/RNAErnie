@@ -1,4 +1,4 @@
-# RNAErnie
+# RNAErnie{ignore=true}
 
 Official implement of paper "Multi-purpose RNA Language Modeling with Motif-aware Pre-training and Type-guided Fine-tuning" with [paddlepaddle](https://github.com/PaddlePaddle/Paddle/tree/develop).
 
@@ -6,6 +6,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ![Overview](./images/overview.png)
 
+[toc]
 ## Installation
 
 <!-- ### Use Docker Image (Strongly Recommended) -->
@@ -280,3 +281,7 @@ python run_ssp.py \
 ```
 
 If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
+
+## Update Log
+
+- 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
