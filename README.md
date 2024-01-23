@@ -32,6 +32,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
       - [1. Data Preparation](#1-data-preparation-3)
       - [2. Adaptation](#2-adaptation)
       - [3. Evaluation](#3-evaluation-2)
+  - [Baselines](#baselines)
   - [Update Log](#update-log)
 
 
@@ -309,6 +310,9 @@ python run_ssp.py \
 ```
 
 If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
+
+## Baselines
+We also implement other BERT-like large-scale pre-trained RNA language models for comparison, see here: https://github.com/CatIIIIIIII/RNAErnie_baselines.
 
 ## Update Log
 
