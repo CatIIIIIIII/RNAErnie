@@ -83,7 +83,8 @@ class IndicatorClassifier(nn.Layer):
 
         """
         with paddle.no_grad():
-            outputs = self.indicator(input_ids, masked_positions=masked_positions)
+            outputs = self.indicator(
+                input_ids, masked_positions=masked_positions)
             return outputs
 
 
@@ -206,11 +207,13 @@ class BaseTrainer(object):
         """
         if self.train_dataset:
             train_sampler = self._get_sampler(self.train_dataset)
-            self.train_dataloader = self._get_dataloader(self.train_dataset, train_sampler)
+            self.train_dataloader = self._get_dataloader(
+                self.train_dataset, train_sampler)
 
         if self.eval_dataset:
             eval_sampler = self._get_sampler(self.eval_dataset)
-            self.eval_dataloader = self._get_dataloader(self.eval_dataset, eval_sampler)
+            self.eval_dataloader = self._get_dataloader(
+                self.eval_dataset, eval_sampler)
 
     def save_model(self, metrics_dataset, epoch):
         """
@@ -228,9 +231,11 @@ class BaseTrainer(object):
                 print("Remove old max model dir:", self.max_model_dir)
                 shutil.rmtree(self.max_model_dir)
 
-            self.max_model_dir = osp.join(self.args.output, "epoch_" + str(epoch))
+            self.max_model_dir = osp.join(
+                self.args.output, "epoch_" + str(epoch))
             os.makedirs(self.max_model_dir)
-            save_model_path = osp.join(self.max_model_dir, "model_state.pdparams")
+            save_model_path = osp.join(
+                self.max_model_dir, "model_state.pdparams")
             paddle.save(self.model.state_dict(), save_model_path)
             print("Model saved at:", save_model_path)
 
@@ -253,7 +258,8 @@ class BaseTrainer(object):
         sep_id = token_to_idx[self.tokenizer.sep_token]
 
         is_cross = (seq_lens <= max_seq_len - 2)  # remove [SEP] & [LABEL] token
-        ind_positions = paddle.where(is_cross, x=seq_lens - 1, y=max_seq_len - 3)
+        ind_positions = paddle.where(
+            is_cross, x=seq_lens - 1, y=max_seq_len - 3)
         label_positions = ind_positions + 1
         sep_positions = ind_positions + 2
         for b in range(B):
@@ -264,7 +270,8 @@ class BaseTrainer(object):
         for i in range(1, B):
             masked_positions[i] += i * max_seq_len
         with paddle.no_grad():
-            ind_logtis = indicator(input_ids=input_ids, masked_positions=masked_positions)
+            ind_logtis = indicator(input_ids=input_ids,
+                                   masked_positions=masked_positions)
             ind_logits = ind_logtis.detach()  # [B, vocab_size]
 
         # remove special tokens and bases (A, T, C, G)
@@ -272,9 +279,11 @@ class BaseTrainer(object):
         ind_logits[:, 35:] = float('-inf')
         ind_probs = F.softmax(ind_logits, axis=-1)
         # (B, k), (B)
-        topk_probs, topk_ind_ids = paddle.topk(ind_probs, self.args.top_k, axis=-1, largest=True)
+        topk_probs, topk_ind_ids = paddle.topk(
+            ind_probs, self.args.top_k, axis=-1, largest=True)
         # (B*Ch, k, max_seq_len)
-        input_ids_inds = paddle.tile(input_ids.unsqueeze(axis=1), repeat_times=(1, self.args.top_k, 1))
+        input_ids_inds = paddle.tile(input_ids.unsqueeze(
+            axis=1), repeat_times=(1, self.args.top_k, 1))
 
         for b in range(B):
             input_ids_inds[b, :, label_positions[b]] = paddle.t(topk_ind_ids[b])
@@ -372,7 +381,13 @@ class BaseMetrics(abc.ABC):
         for name in self.metrics:
             func = getattr(self, name)
             if func:
-                m = func(preds, labels)
+                if func == self.auc:
+                    # given two neural outputs, calculate their logits
+                    # and then calculate auc
+                    logits = F.sigmoid(outputs).cpu().numpy()
+                    m = func(logits, labels)
+                else:
+                    m = func(preds, labels)
                 res[name] = m
             else:
                 raise NotImplementedError
@@ -454,6 +469,8 @@ class BaseMetrics(abc.ABC):
         Returns:
             precision
         """
+        labels += 1
+        preds = preds[:, 1]
         return roc_auc_score(labels, preds)
 
 
@@ -492,12 +509,16 @@ class BaseStructMetrics(abc.ABC):
             accuracy
         """
         if mask is not None:
-            tp = np.sum(np.logical_and(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)), mask))
-            tn = np.sum(np.logical_and(np.logical_and(np.equal(labels, 0), np.equal(logits, 0)), mask))
+            tp = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)), mask))
+            tn = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 0), np.equal(logits, 0)), mask))
             return (tp + tn) / np.sum(np.equal(mask, 1))
         else:
-            tp = np.sum(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)))
-            tn = np.sum(np.logical_and(np.equal(labels, 0), np.equal(logits, 0)), )
+            tp = np.sum(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)))
+            tn = np.sum(np.logical_and(
+                np.equal(labels, 0), np.equal(logits, 0)), )
             return (tp + tn) / labels.shape[0]
 
     @staticmethod
@@ -513,11 +534,15 @@ class BaseStructMetrics(abc.ABC):
             precision
         """
         if mask is not None:
-            tp = np.sum(np.logical_and(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)), mask))
-            fp = np.sum(np.logical_and(np.logical_and(np.equal(labels, 0), np.equal(logits, 1)), mask))
+            tp = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)), mask))
+            fp = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 0), np.equal(logits, 1)), mask))
         else:
-            tp = np.sum(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)))
-            fp = np.sum(np.logical_and(np.equal(labels, 0), np.equal(logits, 1)), )
+            tp = np.sum(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)))
+            fp = np.sum(np.logical_and(
+                np.equal(labels, 0), np.equal(logits, 1)), )
         return tp / (tp + fp)
 
     @staticmethod
@@ -533,11 +558,15 @@ class BaseStructMetrics(abc.ABC):
             recall
         """
         if mask is not None:
-            tp = np.sum(np.logical_and(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)), mask))
-            fn = np.sum(np.logical_and(np.logical_and(np.equal(labels, 1), np.equal(logits, 0)), mask))
+            tp = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)), mask))
+            fn = np.sum(np.logical_and(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 0)), mask))
         else:
-            tp = np.sum(np.logical_and(np.equal(labels, 1), np.equal(logits, 1)))
-            fn = np.sum(np.logical_and(np.equal(labels, 1), np.equal(logits, 0)), )
+            tp = np.sum(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 1)))
+            fn = np.sum(np.logical_and(
+                np.equal(labels, 1), np.equal(logits, 0)), )
         return tp / (tp + fn)
 
     def f1s(self, logits, labels, mask=None):
@@ -587,5 +616,6 @@ class FuncMetrics(object):
                 m = func(preds, labels)
                 res[name] = m
             else:
-                raise NotImplementedError("Metric {} is not implemented.".format(name))
+                raise NotImplementedError(
+                    "Metric {} is not implemented.".format(name))
         return res
