@@ -1,4 +1,4 @@
-# RNAErnie{ignore=true}
+# RNAErnie
 
 Official implement of paper "Multi-purpose RNA Language Modeling with Motif-aware Pre-training and Type-guided Fine-tuning" with [paddlepaddle](https://github.com/PaddlePaddle/Paddle/tree/develop).
 
@@ -6,7 +6,35 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ![Overview](./images/overview.png)
 
-[toc]
+- [RNAErnie](#rnaernie)
+  - [Installation](#installation)
+    - [Create Environment with Conda](#create-environment-with-conda)
+    - [Run in Docker](#run-in-docker)
+      - [Step1: Prepare code](#step1-prepare-code)
+      - [Step2: Prepare running environment](#step2-prepare-running-environment)
+      - [Step3: Run](#step3-run)
+  - [Pre-training](#pre-training)
+    - [1. Data Preparation](#1-data-preparation)
+    - [2. Pre-training](#2-pre-training)
+    - [3. Download Pre-trained Models](#3-download-pre-trained-models)
+    - [4. Visualization](#4-visualization)
+    - [5. Extract RNA Sequence Embeddings](#5-extract-rna-sequence-embeddings)
+  - [Downstream Tasks](#downstream-tasks)
+    - [RNA sequence classification](#rna-sequence-classification)
+      - [1. Data Preparation](#1-data-preparation-1)
+      - [2. Fine-tuning](#2-fine-tuning)
+      - [3. Evaluation](#3-evaluation)
+    - [RNA RNA interaction prediction](#rna-rna-interaction-prediction)
+      - [1. Data Preparation](#1-data-preparation-2)
+      - [2. Fine-tuning](#2-fine-tuning-1)
+      - [3. Evaluation](#3-evaluation-1)
+    - [RNA secondary structure prediction](#rna-secondary-structure-prediction)
+      - [1. Data Preparation](#1-data-preparation-3)
+      - [2. Adaptation](#2-adaptation)
+      - [3. Evaluation](#3-evaluation-2)
+  - [Update Log](#update-log)
+
+
 ## Installation
 
 <!-- ### Use Docker Image (Strongly Recommended) -->
@@ -39,7 +67,7 @@ git clone https://github.com/CatIIIIIIII/RNAErnie.git
 #### Step2: Prepare running environment
 Here we provide two ways to load the docker image.
 
-##### [Option1]
+**[Option1]**
 You can directly access the docker image using this link:
 ```bash
 https://hub.docker.com/r/nwang227/rnaernie
@@ -60,14 +88,14 @@ sudo docker pull nwang227/rnaernie:1.1
     - Start the docker service with `systemctl start docker`
     - Then try to run the container again.
 
-##### [Option2] 
+**[Option2]**
 Or you can download the image tar from [Google Drive](https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3) or use the url as follow
 
 ```bash
 https://drive.google.com/file/d/1Lkgw7w9xGZQ02PnU3yk0cn1V9om2yfd3
 ```
 
-and load by 
+and load by
 
 ```bash
 sudo docker load --input rnaernie-1.1.tar
