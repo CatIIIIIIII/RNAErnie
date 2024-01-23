@@ -309,11 +309,11 @@ python run_ssp.py \
     --train=False
 ```
 
-If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
-
 ## Baselines
 We also implement other BERT-like large-scale pre-trained RNA language models for comparison, see here: https://github.com/CatIIIIIIII/RNAErnie_baselines.
 
 ## Update Log
 
 - 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
+
+If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
