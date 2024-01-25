@@ -42,24 +42,31 @@ MAX_SEQ_LEN = {
 }
 # ========== Configuration
 logger.info("Loading configuration.")
-parser = argparse.ArgumentParser('Implementation of RNA-RNA Interaction prediction.')
+parser = argparse.ArgumentParser(
+    'Implementation of RNA-RNA Interaction prediction.')
 # model args
 parser.add_argument('--model_name_or_path', type=str, default="./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final/",
                     help='The pretrain model for feature extraction.')
-parser.add_argument('--with_pretrain', type=str2bool, default=True, help='Whether use original channels.')
-parser.add_argument('--proj_size', type=int, default=64, help='Project pretrained features to this size.')
+parser.add_argument('--with_pretrain', type=str2bool,
+                    default=True, help='Whether use original channels.')
+parser.add_argument('--proj_size', type=int, default=64,
+                    help='Project pretrained features to this size.')
 parser.add_argument('--model_path',
                     type=str,
                     default="./output_ft/rr_inter/MirTarRAW/BERT,ERNIE,MOTIF,PROMPT/model_state.pdparams",
                     help='The build-in pretrained LM or the path to local model parameters.')
 
 # data args
-parser.add_argument('--dataset', type=str, default="MirTarRAW", choices=DATASETS,
-                    help='The file list to train.')
-parser.add_argument('--dataset_dir', type=str, default="./data/ft/rr/", help='Local path for dataset.')
-parser.add_argument('--k_mer', type=int, default=1, help='Number of continuous nucleic acids to form a token.')
-parser.add_argument('--vocab_path', type=str, default="./data/vocab/", help='Local path for vocab file.')
-parser.add_argument('--dataloader_num_workers', type=int, default=16, help='The number of threads used by dataloader.')
+parser.add_argument('--dataset', type=str, default="MirTarRAW",
+                    choices=DATASETS, help='The file list to train.')
+parser.add_argument('--dataset_dir', type=str,
+                    default="./data/ft/rr/", help='Local path for dataset.')
+parser.add_argument('--k_mer', type=int, default=1,
+                    help='Number of continuous nucleic acids to form a token.')
+parser.add_argument('--vocab_path', type=str,
+                    default="./data/vocab/", help='Local path for vocab file.')
+parser.add_argument('--dataloader_num_workers', type=int,
+                    default=16, help='The number of threads used by dataloader.')
 parser.add_argument('--dataloader_drop_last', type=str2bool, default=True,
                     help='Whether drop the last sample.')
 # training args
@@ -71,19 +78,28 @@ parser.add_argument('--disable_tqdm', type=str2bool, default=False,
 parser.add_argument('--fix_pretrain', type=str2bool, default=False,
                     help='Whether fix parameters of pretrained model.')
 
-parser.add_argument('--train', type=str2bool, default=True, help='Whether train the model.')
-parser.add_argument('--batch_size', type=int, default=256, help='The number of samples used per step & per device.')
-parser.add_argument('--num_train_epochs', type=int, default=100, help='The number of epoch for training.')
-parser.add_argument('--lr', type=float, default=1e-3, help='The learning rate of optimizer.')
-parser.add_argument('--metrics', type=str2list, default="Accuracy,Recall,Precision,F1s",
+parser.add_argument('--train', type=str2bool, default=True,
+                    help='Whether train the model.')
+parser.add_argument('--batch_size', type=int, default=256,
+                    help='The number of samples used per step & per device.')
+parser.add_argument('--num_train_epochs', type=int, default=100,
+                    help='The number of epoch for training.')
+parser.add_argument('--lr', type=float, default=1e-3,
+                    help='The learning rate of optimizer.')
+parser.add_argument('--metrics', type=str2list,
+                    default="Accuracy,Recall,Precision,F1s,AUC",
                     help='Use which metrics to evaluate model, could be concatenate by ","'
                          'and the first one will show on pbar.')
 
 # logging args
-parser.add_argument('--logging_steps', type=int, default=100, help='Print logs every logging_step steps.')
-parser.add_argument('--output', type=str, default="./output_ft/rr_inter", help='Logging directory.')
-parser.add_argument('--visualdl_dir', type=str, default="visualdl", help='Visualdl logging directory.')
-parser.add_argument('--save_max', type=str2bool, default=True, help='Save model with max metric.')
+parser.add_argument('--logging_steps', type=int, default=100,
+                    help='Print logs every logging_step steps.')
+parser.add_argument('--output', type=str,
+                    default="./output_ft/rr_inter", help='Logging directory.')
+parser.add_argument('--visualdl_dir', type=str,
+                    default="visualdl", help='Visualdl logging directory.')
+parser.add_argument('--save_max', type=str2bool, default=True,
+                    help='Save model with max metric.')
 
 args = parser.parse_args()
 
@@ -91,7 +107,8 @@ if __name__ == "__main__":
     # ========== post process
     if ".txt" not in args.vocab_path:
         # expected: "./data/vocab/vocab_1MER.txt"
-        args.vocab_path = osp.join(args.vocab_path, "vocab_" + str(args.k_mer) + "MER.txt")
+        args.vocab_path = osp.join(
+            args.vocab_path, "vocab_" + str(args.k_mer) + "MER.txt")
     if args.model_path.split(".")[-1] != "pdparams":
         args.model_path = osp.join(args.model_path, "model_state.pdparams")
     ct = default_logdir()
@@ -123,7 +140,8 @@ if __name__ == "__main__":
     if args.with_pretrain:
         pretrained_model = ErnieModel.from_pretrained(args.model_name_or_path)
         model_config = pretrained_model.get_model_config()
-        hidden_states_size = model_config["hidden_size"]  # for pretrained features extraction and projection
+        # for pretrained features extraction and projection
+        hidden_states_size = model_config["hidden_size"]
     model = ErnieRRInter(extractor=pretrained_model,
                          hidden_states_size=hidden_states_size,
                          proj_size=args.proj_size,
@@ -147,18 +165,21 @@ if __name__ == "__main__":
                                                   split=0.8,
                                                   seed=args.seed)
     raw_dataset_train, raw_dataset_test = datasets_generator.get()
-    m_dataset_train, m_dataset_test = MapDataset(raw_dataset_train), MapDataset(raw_dataset_test)
+    m_dataset_train, m_dataset_test = MapDataset(
+        raw_dataset_train), MapDataset(raw_dataset_test)
     m_dataset_train.map(trans_func)
     m_dataset_test.map(trans_func)
 
     # ========== Create the learning_rate scheduler (if need) and optimizer
     logger.info("Creating learning rate scheduler and optimizer.")
     # optimizer
-    optimizer = paddle.optimizer.AdamW(parameters=model.parameters(), learning_rate=args.lr)
+    optimizer = paddle.optimizer.AdamW(
+        parameters=model.parameters(), learning_rate=args.lr)
 
     # ========== Create visualizer
     if args.train:
-        _visualizer = Visualizer(log_dir=args.visualdl_dir, name="RNA RNA interaction, " + args.dataset + ", " + ct)
+        _visualizer = Visualizer(
+            log_dir=args.visualdl_dir, name="RNA RNA interaction, " + args.dataset + ", " + ct)
     else:
         _visualizer = None
 
