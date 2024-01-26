@@ -6,6 +6,9 @@ Date  : 2022/9/8 1:21 PM
 """
 
 # built-in modules
+from paddlenlp.transformers import ErniePretrainedModel
+from paddlenlp.transformers.ernie.modeling import ErnieOnlyMLMHead
+from paddle import nn
 import random
 from paddlenlp.data import Stack
 import numpy as np
@@ -21,13 +24,15 @@ from paddlenlp.trainer import Trainer
 from paddlenlp.trainer import TrainingArguments
 # self-defined modules
 from dataset_utils import seq2kmer
+import paddle.nn.functional as F
 
 
 def add_start_docstrings(*docstr):
     """add docstring to function
     """
     def docstring_decorator(fn):
-        fn.__doc__ = "".join(docstr) + (fn.__doc__ if fn.__doc__ is not None else "")
+        fn.__doc__ = "".join(docstr) + \
+            (fn.__doc__ if fn.__doc__ is not None else "")
         return fn
 
     return docstring_decorator
@@ -56,7 +61,8 @@ class PreTrainingArguments(TrainingArguments):
 
 
 class PreFastaDataset(Dataset):
-    def __init__(self, fasta_dir, prefix, num_file, num_samples_per_file, tokenizer, max_model_length=512, num_specials=4, replace=True):
+    def __init__(self, fasta_dir, prefix, num_file, num_samples_per_file,
+                 tokenizer, max_model_length=512, num_specials=4, replace=True):
         """init pretrain fasta dataset
 
         Args:
@@ -109,7 +115,8 @@ class PreFastaDataset(Dataset):
             seq = seq.replace("U", "T")
 
         # cut into vocabs by k_mer
-        kmer_text = seq2kmer(seq=seq, k_mer=self.tokenizer.k_mer, max_length=self.max_model_length - self.num_specials)
+        kmer_text = seq2kmer(seq=seq, k_mer=self.tokenizer.k_mer,
+                             max_length=self.max_model_length - self.num_specials)
         kmer_text += (" " + label)
 
         return {"kmer_text": kmer_text}
@@ -143,7 +150,8 @@ def load_motif(motif_dir, motif_name, tokenizer):
         motif_tokens = []
         for m in motifs:
             kmer_text = seq2kmer(seq=m, k_mer=1)
-            input_ids = tokenizer(kmer_text, return_token_type_ids=False)["input_ids"]
+            input_ids = tokenizer(kmer_text, return_token_type_ids=False)[
+                "input_ids"]
             input_ids = input_ids[1:-1]
             motif_tokens.append(input_ids)
         res[name] = motif_tokens
@@ -207,9 +215,9 @@ class CriterionWrapper(paddle.nn.Layer):
         Returns:
             Tensor: final loss.
         """
-        masked_lm_labels = labels
         prediction_scores = output
-        loss = self.criterion(prediction_scores, None, masked_lm_labels)
+        masked_lm_labels = labels
+        loss = self.criterion(prediction_scores, masked_lm_labels)
         return loss
 
 
@@ -266,7 +274,6 @@ class PreDataCollator:
         """
         # Padding
         max_length = max([x.length for x in data])
-        # print(max_length)
         for x in data:
             remains = max_length - x.length
 
@@ -332,8 +339,10 @@ def convert_text_to_pretrain(raw_data, tokenizer, pre_strategy, max_seq_length, 
     tokens = tokens[1:-2]
     # masking
     max_predictions_num = masked_lm_prob * max_seq_length
-    np_rng = np.random.RandomState(seed=(seed + tokenized_texts['input_ids'][1]) % 2 ** 32)
+    np_rng = np.random.RandomState(
+        seed=(seed + tokenized_texts['input_ids'][1]) % 2 ** 32)
 
+    # randomly choose pretrain strategy
     stages = []
     if "BERT" in pre_strategy:
         input_ids, masked_positions, masked_labels = create_masked_lm_predictions_bert(
@@ -362,14 +371,21 @@ def convert_text_to_pretrain(raw_data, tokenizer, pre_strategy, max_seq_length, 
         stages += [(input_ids, masked_positions, masked_labels, "MOTIF")]
 
     (input_ids, masked_positions, masked_labels, stage_name) = random.choice(stages)
+
     if "PROMPT" in pre_strategy:
         input_ids = [CLS] + input_ids + [IND] + [LABEL] + [SEP]
     else:
         input_ids = [CLS] + input_ids + [SEP]
-    assert len(input_ids) <= 512, f"input length ({len(input_ids)}) exceed model max length"
+    assert len(
+        input_ids) <= 512, f"input length ({len(input_ids)}) exceed model max length"
 
-    masked_positions = [x + 1 for x in masked_positions]  # add [CLS] at beginning
+    # add [CLS] at beginning
+    masked_positions = [x + 1 for x in masked_positions]
     input_mask = [1] * len(input_ids)
+
+    # add [CLS] mask if use ad-hoc prompt
+    masked_positions = [0] + masked_positions
+    masked_labels = [LABEL] + masked_labels
     res = PreTrainingInstance(input_ids=input_ids,
                               input_mask=input_mask,
                               masked_lm_positions=masked_positions,
@@ -400,7 +416,8 @@ def create_masked_lm_predictions_bert(tokens, tokenizer, masked_lm_prob, max_pre
     cand_indexes = list(range(len(tokens)))
     rng.shuffle(cand_indexes)
 
-    num_to_predict = min(max_predictions_per_seq, max(1, int(round(len(tokens) * masked_lm_prob))))
+    num_to_predict = min(max_predictions_per_seq, max(
+        1, int(round(len(tokens) * masked_lm_prob))))
     output_tokens = list(tokens)
     masked_lms = []
     covered_indexes = set()
@@ -420,7 +437,8 @@ def create_masked_lm_predictions_bert(tokens, tokenizer, masked_lm_prob, max_pre
                 masked_token = tokens[index]
             # 10% of the time, replace with random word
             else:
-                masked_token = normal_vocab_words[rng.randint(0, len(normal_vocab_words))]
+                masked_token = normal_vocab_words[rng.randint(
+                    0, len(normal_vocab_words))]
 
         output_tokens[index] = masked_token
         masked_lms.append(MaskedLmInstance(index=index, label=tokens[index]))
@@ -469,7 +487,8 @@ def create_masked_lm_predictions_ernie(tokens, tokenizer, masked_lm_prob, max_pr
     masked_lm_positions = []
     masked_lm_labels = []
 
-    num_to_predict = min(max_predictions_per_seq, max(1, int(round(len(tokens) * masked_lm_prob))))
+    num_to_predict = min(max_predictions_per_seq, max(
+        1, int(round(len(tokens) * masked_lm_prob))))
 
     ngrams = np.arange(k_mer, k_mer + max_ngrams, dtype=np.int64)
     pvals = 1. / np.arange(1, max_ngrams + 1)
@@ -534,10 +553,12 @@ def create_masked_lm_predictions_ernie(tokens, tokenizer, masked_lm_prob, max_pr
                     masked_token = output_tokens[index]
                 # 10% of the time, replace with random word
                 else:
-                    masked_token = normal_vocab_words[rng.randint(0, len(normal_vocab_words))]
+                    masked_token = normal_vocab_words[rng.randint(
+                        0, len(normal_vocab_words))]
             output_tokens[index] = masked_token
             # plus 1 because we remove [CLS] at first
-            masked_lms.append(MaskedLmInstance(index=index, label=backup_output_tokens[index]))
+            masked_lms.append(MaskedLmInstance(
+                index=index, label=backup_output_tokens[index]))
 
     assert len(masked_lms) <= num_to_predict
 
@@ -580,7 +601,8 @@ def create_masked_lm_predictions_motif(
     output_tokens = list(tokens)
     masked_lm_positions = []
     masked_lm_labels = []
-    num_to_predict = min(max_predictions_per_seq, max(1, int(round(len(tokens) * masked_lm_prob))))
+    num_to_predict = min(max_predictions_per_seq, max(
+        1, int(round(len(tokens) * masked_lm_prob))))
 
     ngram_indexes = []
     # motif_name = random.sample(motif_trees.keys(), 1)
@@ -636,10 +658,12 @@ def create_masked_lm_predictions_motif(
                     masked_token = output_tokens[index]
                 # 10% of the time, replace with random word
                 else:
-                    masked_token = normal_vocab_words[np_rng.randint(0, len(normal_vocab_words))]
+                    masked_token = normal_vocab_words[np_rng.randint(
+                        0, len(normal_vocab_words))]
             output_tokens[index] = masked_token
             # plus 1 because we remove [CLS] at first
-            masked_lms.append(MaskedLmInstance(index=index, label=backup_output_tokens[index]))
+            masked_lms.append(MaskedLmInstance(
+                index=index, label=backup_output_tokens[index]))
 
     assert len(masked_lms) <= num_to_predict
 
@@ -650,3 +674,110 @@ def create_masked_lm_predictions_motif(
         masked_lm_labels.append(p.label)
 
     return output_tokens, masked_lm_positions, masked_lm_labels
+
+
+class ErnieForMaskedLM_adhoc(ErniePretrainedModel):
+    """
+    Ernie Model with a `masked language modeling` head on top & classification head on top.
+
+            ------------------------------------
+            | [CLS] A C T G A [MASK] T G G C A |
+            ------------------------------------
+                |               |
+                |               |
+            -----------      -------
+            | IND CLS |      | MLM |
+            -----------      -------
+
+    Args:
+        config (:class:`ErnieConfig`):
+            An instance of ErnieConfig used to construct ErnieForMaskedLM.
+    """
+
+    def __init__(self, ernie):
+        super(ErnieForMaskedLM_adhoc, self).__init__()
+        self.ernie = ernie
+        self.cls = ErnieOnlyMLMHead(
+            self.ernie.config["hidden_size"],
+            self.ernie.config["vocab_size"],
+            self.ernie.config["hidden_act"],
+            embedding_weights=self.ernie.embeddings.word_embeddings.weight)
+        self.ind_cls = nn.Linear(
+            self.ernie.config["hidden_size"], 28)
+        self.apply(self.init_weights)
+
+    def forward(self,
+                input_ids,
+                token_type_ids=None,
+                position_ids=None,
+                attention_mask=None,
+                masked_positions=None,
+                inputs_embeds=None,
+                labels=None,
+                output_hidden_states=False,
+                output_attentions=False,
+                return_dict=False):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        outputs = self.ernie(
+            input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            attention_mask=attention_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+        # find where masked position value is the multiple of 512 and is not 0
+        cls_positions_index = paddle.where(
+            paddle.logical_and(masked_positions % 512 == 0, masked_positions != 0))[0].squeeze(1)
+        # add the first one
+        cls_positions_index = paddle.concat(
+            [paddle.zeros((1, ), dtype="int64"), cls_positions_index], axis=0)
+
+        # get value of cls_positions
+        # cls_positions = masked_positions[cls_positions_index]
+
+        # find where masked position value is not the multiple of 512
+        masked_positions_index = paddle.where(
+            masked_positions % 512 != 0)[0].squeeze(1)
+        masked_positions = masked_positions[masked_positions_index]
+
+        cls_scores = self.ind_cls(sequence_output[:, 0, :])
+        prediction_scores = self.cls(
+            sequence_output, masked_positions=masked_positions)
+        # calculate indication score
+
+        return ((cls_positions_index, masked_positions_index), (cls_scores, prediction_scores))
+
+
+class ErniePretrainingCriterion_adhoc(paddle.nn.Layer):
+    r"""
+    The loss output of Ernie Model during the pretraining:
+    a `masked language modeling` head and a `next sentence prediction (classification)` head.
+
+    """
+
+    def __init__(self, alpha=1):
+        super(ErniePretrainingCriterion_adhoc, self).__init__()
+        self.alpha = alpha
+
+    def forward(self, model_outputs, masked_lm_labels, ):
+        """
+        """
+        position, scores = model_outputs
+        cls_positions, masked_positions = position
+        cls_scores, prediction_scores = scores
+        cls_labels = paddle.index_select(masked_lm_labels, cls_positions)
+        cls_labels -= 7
+
+        masked_labels = paddle.index_select(masked_lm_labels, masked_positions)
+
+        with paddle.static.amp.fp16_guard():
+            ind_loss = F.cross_entropy(
+                cls_scores, cls_labels, ignore_index=-1, reduction="none")
+            masked_lm_loss = F.cross_entropy(
+                prediction_scores, masked_labels, ignore_index=-1, reduction="none")
+
+            return paddle.mean(masked_lm_loss) + self.alpha * paddle.mean(ind_loss)
