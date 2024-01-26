@@ -315,8 +315,8 @@ We also implement other BERT-like large-scale pre-trained RNA language models fo
 
 ## Feature work
 We pretrained  model from scractch with additional classification head appended to '[CLS]' token. The total loss function is
-$\mathcal{L} = \mathcal{L}_{\rm MLM}+\alpha\mathcal{L}_{\rm CLS}$
-where $\mathcal{L}_{MLM}$ is mask language model loss and $\mathcal{L}_{\rm MLM}$ is classification loss and we set the balance coefficient $\alpha$ as $0.1$. Other settings are kept same with our original RNAErnie pre-training procedure.
+$L = L_{MLM}+\alpha L_{CLS}$
+where $L_{MLM}$ is mask language model loss and $L_{CLS}$ is classification loss and we set the balance coefficient $\alpha$ as $0.1$. Other settings are kept same with our original RNAErnie pre-training procedure.
 
 The pre-trained model could be downloaded from [Google Drive](https://drive.google.com/drive/folders/13Wmw_1hM-iPdvIhJUPxtH-sR92PUvCVr?usp=sharing) and place the `.pdparams` and `.json` files in the `./output/BERT,ERNIE,MOTIF,ADHOC` folder. Moreover, original pre-trained RNAErnie weight at 1 epoch could be obtained from [Google Drive](https://drive.google.com/drive/folders/1nHyHbnBpSgMVYvTU4T7LjTmmWDE2KiKY?usp=sharing).
 
