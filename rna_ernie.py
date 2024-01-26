@@ -60,12 +60,14 @@ class BatchConverter(object):
             raw_data = self.data[d:d + self.batch_size]
             names = [x[0] for x in raw_data]
             seqs = [x[1] for x in raw_data]
-            seqs = [x[self.st_pos:self.st_pos + self.max_seq_len - 2] for x in seqs]
+            seqs = [x[self.st_pos:self.st_pos + self.max_seq_len - 2]
+                    for x in seqs]
             seqs = [x.upper().replace("U", "T") for x in seqs]
             # 2 means [CLS] and [SEP]
             input_ids = [seq2input_ids(x, self.tokenizer) for x in seqs]
             if self.is_pad:
-                input_ids = [x + [0] * (self.max_seq_len - len(x)) for x in input_ids]
+                input_ids = [x + [0] * (self.max_seq_len - len(x))
+                             for x in input_ids]
                 input_ids = self.stack_fn(input_ids)
             input_ids = paddle.to_tensor(input_ids)
             yield names, seqs, input_ids
@@ -92,7 +94,8 @@ if __name__ == "__main__":
                                      max_seq_len=512)
 
     # ========== RNAErnie Model
-    rna_ernie = ErnieModel.from_pretrained("./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint-final")
+    rna_ernie = ErnieModel.from_pretrained(
+        "./output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final")
 
     # call batch_converter to convert sequences to batch inputs
     for names, _, inputs_ids in batch_converter(data):
