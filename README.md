@@ -33,6 +33,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
       - [2. Adaptation](#2-adaptation)
       - [3. Evaluation](#3-evaluation-2)
   - [Baselines](#baselines)
+  - [Feature work](#feature-work)
   - [Update Log](#update-log)
 
 
@@ -312,8 +313,16 @@ python run_ssp.py \
 ## Baselines
 We also implement other BERT-like large-scale pre-trained RNA language models for comparison, see here: https://github.com/CatIIIIIIII/RNAErnie_baselines.
 
+## Feature work
+We pretrained  model from scractch with additional classification head appended to '[CLS]' token. The total loss function is
+$$\mathcal{L} = \mathcal{L}_{\rm MLM}+\alpha\mathcal{L}_{\rm CLS}$$
+where $\mathcal{L}_{\rm MLM}$ is mask language model loss and $\mathcal{L}_{\rm MLM}$ is classification loss and we set the balance coefficient $\alpha$ as $0.1$. Other settings are kept same with our original RNAErnie pre-training procedure.
+
+The pre-trained model could be downloaded from [Google Drive](https://drive.google.com/drive/folders/13Wmw_1hM-iPdvIhJUPxtH-sR92PUvCVr?usp=sharing) and place the `.pdparams` and `.json` files in the `./output/BERT,ERNIE,MOTIF,ADHOC` folder. Moreover, original pre-trained RNAErnie weight at 1 epoch could be obtained from [Google Drive](https://drive.google.com/drive/folders/1nHyHbnBpSgMVYvTU4T7LjTmmWDE2KiKY?usp=sharing).
+
 ## Update Log
 
 - 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
+- 2024.01.26: Add ad-hoc pre-training with additional classification task.
 
 If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
