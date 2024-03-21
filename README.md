@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/665802008.svg)](https://zenodo.org/doi/10.5281/zenodo.10847620)
+
 # RNAErnie
 
 Official implement of paper "Multi-purpose RNA Language Modeling with Motif-aware Pre-training and Type-guided Fine-tuning" with [paddlepaddle](https://github.com/PaddlePaddle/Paddle/tree/develop).
@@ -7,6 +9,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 ![Overview](./images/overview.png)
 
 - [RNAErnie](#rnaernie)
+  - [Update Log](#update-log)
   - [Installation](#installation)
     - [Create Environment with Conda](#create-environment-with-conda)
     - [Run in Docker](#run-in-docker)
@@ -33,9 +36,17 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
       - [2. Adaptation](#2-adaptation)
       - [3. Evaluation](#3-evaluation-2)
   - [Baselines](#baselines)
+  - [Citation](#citation)
   - [Feature work](#feature-work)
-  - [Update Log](#update-log)
 
+
+## Update Log
+
+- 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
+- 2024.01.26: Add ad-hoc pre-training with additional classification task.
+- 2024.03.21: Add DOI and citation.
+
+If you have any questions, feel free to contact us by email: `wangning.roci@gmail.com`.
 
 ## Installation
 
@@ -313,16 +324,24 @@ python run_ssp.py \
 ## Baselines
 We also implement other BERT-like large-scale pre-trained RNA language models for comparison, see here: https://github.com/CatIIIIIIII/RNAErnie_baselines.
 
+## Citation
+If you use the code or the data for your research, please cite the code:
+```
+@software{wang_ning_2024_10847621,
+  author       = {WANG Ning},
+  title        = {CatIIIIIIII/RNAErnie: v1.0},
+  month        = mar,
+  year         = 2024,
+  publisher    = {Zenodo},
+  version      = {v1.0},
+  doi          = {10.5281/zenodo.10847621},
+  url          = {https://doi.org/10.5281/zenodo.10847621}
+}
+```
+
 ## Feature work
 We pretrained  model from scractch with additional classification head appended to '[CLS]' token. The total loss function is
 $L = L_{MLM}+\alpha L_{CLS}$
 where $L_{MLM}$ is mask language model loss and $L_{CLS}$ is classification loss and we set the balance coefficient $\alpha$ as $0.1$. Other settings are kept same with our original RNAErnie pre-training procedure.
 
 The pre-trained model could be downloaded from [Google Drive](https://drive.google.com/drive/folders/13Wmw_1hM-iPdvIhJUPxtH-sR92PUvCVr?usp=sharing) and place the `.pdparams` and `.json` files in the `./output/BERT,ERNIE,MOTIF,ADHOC` folder. Moreover, original pre-trained RNAErnie weight at 1 epoch could be obtained from [Google Drive](https://drive.google.com/drive/folders/1nHyHbnBpSgMVYvTU4T7LjTmmWDE2KiKY?usp=sharing).
-
-## Update Log
-
-- 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
-- 2024.01.26: Add ad-hoc pre-training with additional classification task.
-
-If you have any questions, feel free to contact us by email: `rnaernie@gmail.com`.
