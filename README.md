@@ -42,9 +42,13 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ## Update Log
 
-- 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
-- 2024.01.26: Add ad-hoc pre-training with additional classification task.
+- 2024.04.20: 🎉🎉 RNAErnie has been accepted by Nature Machine Intellgence! The paper will be released soon.
+
 - 2024.03.21: Add DOI and citation.
+
+- 2024.01.26: Add ad-hoc pre-training with additional classification task.
+
+- 2024.01.23: Integrate AUC metric in base_classes.py for simpler usage; Add content and update log section in README.md.
 
 If you have any questions, feel free to contact us by email: `wangning.roci@gmail.com`.
 
