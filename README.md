@@ -331,17 +331,24 @@ python run_ssp.py \
 We also implement other BERT-like large-scale pre-trained RNA language models for comparison, see here: https://github.com/CatIIIIIIII/RNAErnie_baselines.
 
 ## Citation
-If you use the code or the data for your research, please cite the code:
+If you use the code or the data for your research, please cite our paper as follows:
 ```
-@software{wang_ning_2024_10847621,
-  author       = {WANG Ning},
-  title        = {CatIIIIIIII/RNAErnie: v1.0},
-  month        = mar,
-  year         = 2024,
-  publisher    = {Zenodo},
-  version      = {v1.0},
-  doi          = {10.5281/zenodo.10847621},
-  url          = {https://doi.org/10.5281/zenodo.10847621}
+@Article{Wang2024,
+author={Wang, Ning
+and Bian, Jiang
+and Li, Yuchen
+and Li, Xuhong
+and Mumtaz, Shahid
+and Kong, Linghe
+and Xiong, Haoyi},
+title={Multi-purpose RNA language modelling with motif-aware pretraining and type-guided fine-tuning},
+journal={Nature Machine Intelligence},
+year={2024},
+month={May},
+day={13},
+issn={2522-5839},
+doi={10.1038/s42256-024-00836-4},
+url={https://doi.org/10.1038/s42256-024-00836-4}
 }
 ```
 
