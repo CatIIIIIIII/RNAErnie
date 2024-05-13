@@ -42,6 +42,8 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ## Update Log
 
+- 2024.05.13: 🎉🎉 Our paper has been published at [https://www.nature.com/articles/s42256-024-00836-4](https://www.nature.com/articles/s42256-024-00836-4).
+  
 - 2024.04.20: 🎉🎉 RNAErnie has been accepted by Nature Machine Intelligence! The paper will be released soon.
 
 - 2024.03.21: Add DOI and citation.
