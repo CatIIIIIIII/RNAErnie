@@ -37,7 +37,7 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
       - [3. Evaluation](#3-evaluation-2)
   - [Baselines](#baselines)
   - [Citation](#citation)
-  - [Feature work](#feature-work)
+  - [Future work](#future-work)
 
 
 ## Update Log
@@ -352,7 +352,7 @@ url={https://doi.org/10.1038/s42256-024-00836-4}
 }
 ```
 
-## Feature work
+## Future work
 We pretrained  model from scractch with additional classification head appended to '[CLS]' token. The total loss function is
 $L = L_{MLM}+\alpha L_{CLS}$
 where $L_{MLM}$ is mask language model loss and $L_{CLS}$ is classification loss and we set the balance coefficient $\alpha$ as $0.1$. Other settings are kept same with our original RNAErnie pre-training procedure.
