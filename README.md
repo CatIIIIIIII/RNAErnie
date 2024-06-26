@@ -42,6 +42,8 @@ This repository contains codes and pre-trained models for RNAErnie, which levera
 
 ## Update Log
 
+- 2024.06.26: Considering most of the researchers will prefer to use transformers and pytorch as backend. So, I transfer my work to transformers and train a pytorch model from scratch. The new model is trained with more powerful settings: The max model length is up to 2048 now and the pretraining dataset is the newest version of rnacentral, which contains about 31 million RNA sequences after length filtering (<2048). This pytorch version model has been uploaded to huggingface at https://huggingface.co/WANGNingroci/RNAErnie and the training framework/tokenization is located at https://github.com/CatIIIIIIII/RNAErnie2. (**NOTE**: the tokenization is a little different from the original paddle implementation). Moreover, [Multimolecule](https://github.com/DLS5-Omics/multimolecule) are implementing current most powerful RNA language model with transformers and pytorch. Our model also could be accessed at [https://huggingface.co/multimolecule/rnaernie](https://huggingface.co/multimolecule/rnaernie).
+
 - 2024.05.13: 🎉🎉 Our paper has been published at [https://www.nature.com/articles/s42256-024-00836-4](https://www.nature.com/articles/s42256-024-00836-4).
   
 - 2024.04.20: 🎉🎉 RNAErnie has been accepted by Nature Machine Intelligence! The paper will be released soon.
