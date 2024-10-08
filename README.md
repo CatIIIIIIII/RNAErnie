@@ -199,6 +199,7 @@ batch_converter = BatchConverter(k_mer=1,
 
 # ========== RNAErnie Model
 rna_ernie = ErnieModel.from_pretrained("output/BERT,ERNIE,MOTIF,PROMPT/checkpoint_final/")
+rna_ernie.eval()
 
 # call batch_converter to convert sequences to batch inputs
 for names, _, inputs_ids in batch_converter(data):
